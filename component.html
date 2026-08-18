@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nather — Component Details</title>
+  <meta name="description" content="Detailed information about Nather smart light components." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">Nath<span>er</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="control.html">Control Panel</a></li>
+      </ul>
+      <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+    </div>
+  </nav>
+
+  <main>
+      <section class="comp-detail">
+      <div class="container">
+
+        <a href="index.html#components" class="back-btn">&#8592; Back to Components</a>
+
+        <div class="comp-carousel" id="compCarousel">
+          <div class="comp-carousel-track-wrapper">
+            <div class="comp-carousel-track" id="compCarouselTrack"></div>
+          </div>
+          <div class="comp-carousel-nav">
+            <button class="gallery-btn" id="compCarouselPrev" aria-label="Previous component">&#8592;</button>
+            <div class="gallery-dots" id="compCarouselDots"></div>
+            <button class="gallery-btn" id="compCarouselNext" aria-label="Next component">&#8594;</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">&copy; 2026 Nather.</div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nather — Control Panel</title>
+  <meta name="description" content="Smart lighting control panel — manage rooms, dimmers, and lighting modes." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">Nath<span>er</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="control.html" class="active">Control Panel</a></li>
+        <li class="nav-dropdown">
+          <a href="#">Rooms &#9662;</a>
+          <div class="dropdown-menu">
+            <a href="room.html?id=living">Living Room</a>
+            <a href="room.html?id=bedroom">Bedroom</a>
+            <a href="room.html?id=kitchen">Kitchen</a>
+            <a href="room.html?id=bathroom">Bathroom</a>
+            <a href="room.html?id=hallway">Hallway</a>
+            <a href="room.html?id=garage">Garage</a>
+          </div>
+        </li>
+      </ul>
+      <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <h1>Lighting Control</h1>
+        <p>Select a room to adjust brightness, toggle power, and customize your lighting.</p>
+      </div>
+    </section>
+
+    <section class="control-panel">
+      <div class="container">
+
+        <div class="room-grid" id="roomGrid">
+          <div class="room-card" data-room="living">
+            <div class="room-glow" id="glow-living"></div>
+            <span class="room-icon">&#127968;</span>
+            <h3>Living Room</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-living"></span>
+              <span id="status-living">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-living">Brightness: 0%</div>
+            <a href="room.html?id=living" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+
+          <div class="room-card" data-room="bedroom">
+            <div class="room-glow" id="glow-bedroom"></div>
+            <span class="room-icon">&#128716;</span>
+            <h3>Bedroom</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-bedroom"></span>
+              <span id="status-bedroom">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-bedroom">Brightness: 0%</div>
+            <a href="room.html?id=bedroom" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+
+          <div class="room-card" data-room="kitchen">
+            <div class="room-glow" id="glow-kitchen"></div>
+            <span class="room-icon">&#127858;</span>
+            <h3>Kitchen</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-kitchen"></span>
+              <span id="status-kitchen">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-kitchen">Brightness: 0%</div>
+            <a href="room.html?id=kitchen" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+
+          <div class="room-card" data-room="bathroom">
+            <div class="room-glow" id="glow-bathroom"></div>
+            <span class="room-icon">&#128702;</span>
+            <h3>Bathroom</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-bathroom"></span>
+              <span id="status-bathroom">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-bathroom">Brightness: 0%</div>
+            <a href="room.html?id=bathroom" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+
+          <div class="room-card" data-room="hallway">
+            <div class="room-glow" id="glow-hallway"></div>
+            <span class="room-icon">&#128682;</span>
+            <h3>Hallway</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-hallway"></span>
+              <span id="status-hallway">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-hallway">Brightness: 0%</div>
+            <a href="room.html?id=hallway" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+
+          <div class="room-card" data-room="garage">
+            <div class="room-glow" id="glow-garage"></div>
+            <span class="room-icon">&#128663;</span>
+            <h3>Garage</h3>
+            <div class="room-status">
+              <span class="dot" id="dot-garage"></span>
+              <span id="status-garage">Off</span>
+            </div>
+            <div class="room-brightness" id="brightness-garage">Brightness: 0%</div>
+            <a href="room.html?id=garage" class="room-page-link">Open Room Page &#8599;</a>
+          </div>
+        </div>
+
+        <div class="room-detail" id="roomDetail">
+          <div class="room-detail-header">
+            <h2 id="detailTitle"><span id="detailIcon">&#127968;</span> <span id="detailName">Living Room</span></h2>
+            <button class="close-detail" id="closeDetail" aria-label="Close">&#10005;</button>
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span class="ctrl-icon">&#128161;</span>
+              Power
+            </div>
+            <button class="toggle-sm" id="detailToggle" aria-label="Toggle room light"></button>
+          </div>
+
+          <div class="control-row">
+            <div class="control-label">
+              <span class="ctrl-icon">&#9725;</span>
+              Brightness
+            </div>
+            <div class="brightness-knob-wrap" style="padding:0">
+              <div class="knob-container" id="detailKnob" style="width:120px;height:120px">
+                <svg viewBox="0 0 200 200">
+                  <defs>
+                    <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#f5b342"/>
+                      <stop offset="100%" stop-color="#f5c542"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="knob-track" cx="100" cy="100" r="70"/>
+                  <circle class="knob-fill" id="detailKnobFill" cx="100" cy="100" r="70"/>
+                  <circle class="knob-handle" id="detailKnobHandle" cx="170" cy="100" r="8"/>
+                  <circle class="knob-handle-inner" cx="170" cy="100" r="3"/>
+                </svg>
+                <div class="knob-label">
+                  <div class="knob-value" id="detailKnobValue">0</div>
+                  <div class="knob-unit">%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <div class="auto-light-section accordion">
+        <div class="accordion-header" id="autoLightToggle">
+          <div class="auto-light-header">
+            <div class="al-icon">&#128161;</div>
+            <h2>Entry Lighting</h2>
+          </div>
+          <span class="accordion-arrow" id="autoLightArrow">&#9660;</span>
+        </div>
+        <div class="accordion-body" id="autoLightBody">
+          <p class="auto-light-desc">
+            Select rooms where the light should turn ON automatically when the PIR sensor detects you entering the house.
+          </p>
+          <div class="auto-light-grid" id="autoLightGrid">
+            <div class="auto-room-card" data-auto-room="living">
+              <span class="ar-icon">&#127968;</span>
+              <span class="ar-name">Living Room</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+            <div class="auto-room-card" data-auto-room="bedroom">
+              <span class="ar-icon">&#128716;</span>
+              <span class="ar-name">Bedroom</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+            <div class="auto-room-card" data-auto-room="kitchen">
+              <span class="ar-icon">&#127858;</span>
+              <span class="ar-name">Kitchen</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+            <div class="auto-room-card" data-auto-room="bathroom">
+              <span class="ar-icon">&#128702;</span>
+              <span class="ar-name">Bathroom</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+            <div class="auto-room-card" data-auto-room="hallway">
+              <span class="ar-icon">&#128682;</span>
+              <span class="ar-name">Hallway</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+            <div class="auto-room-card" data-auto-room="garage">
+              <span class="ar-icon">&#128663;</span>
+              <span class="ar-name">Garage</span>
+              <span class="ar-check">&#10003;</span>
+            </div>
+          </div>
+          <div class="auto-status">
+            <span class="as-dot" id="autoStatusDot"></span>
+            <span class="as-label">PIR Status:</span>
+            <span class="as-value" id="autoStatusText">Waiting for motion...</span>
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">&copy; 2026 Nather.</div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
