@@ -316,6 +316,7 @@
     if (!nav) return;
     if (!badge) {
       badge = el("button", "conn-badge");
+      badge.setAttribute("aria-live", "polite");
       badge.type = "button";
       badge.setAttribute("aria-haspopup", "dialog");
       badge.setAttribute("aria-expanded", "false");
@@ -333,9 +334,11 @@
 
   function updateBadge() {
     if (!badge) return;
-    const labels = { online: "Connected", offline: "Reconnecting…", demo: "Demo mode", connecting: "Connecting…" };
+    const labels = { online: "Connected", offline: "Reconnecting…", demo: "Demo Mode", connecting: "Connecting…" };
     badge.dataset.link = link;
-    badge.replaceChildren(el("span", "conn-dot"), el("span", "conn-text", labels[link] || link));
+    const dot = el("span", "conn-dot");
+    dot.setAttribute("aria-hidden", "true");
+    badge.replaceChildren(dot, el("span", "conn-text", labels[link] || link));
     badge.title = mode === "device" ? "Controller at " + (base || location.host) : "No controller found — simulated in the browser";
   }
 
@@ -365,9 +368,9 @@
       row(list, "Firmware", d.fw + (d.simulated ? " (mock)" : ""));
       row(list, "Write auth", d.auth ? "Token required" : "Open");
       panel.appendChild(list);
-      if (lastError) panel.appendChild(el("p", "conn-error", "Last error: " + lastError));
+      if (lastError) panel.appendChild(el("p", "conn-error", "Last request failed: " + lastError + ". Check the board is powered and on the same network, then try again."));
       const actions = el("div", "conn-actions");
-      const demoBtn = el("button", "conn-btn ghost", "Switch to demo");
+      const demoBtn = el("button", "conn-btn ghost", "Switch to Demo Mode");
       demoBtn.type = "button";
       demoBtn.addEventListener("click", useDemo);
       actions.appendChild(demoBtn);
@@ -381,7 +384,8 @@
     if (location.protocol === "https:") {
       panel.appendChild(el("p", "conn-note",
         "Browsers block an HTTPS page from calling a plain-HTTP device. Open the controller's own page on your network instead:"));
-      const a = el("a", "conn-btn", "Open http://nather.local");
+      const a = el("a", "conn-btn", "Open nather.local");
+      a.setAttribute("translate", "no");
       a.href = "http://nather.local/";
       panel.appendChild(a);
       return;
@@ -391,11 +395,16 @@
     const label = el("label", "conn-k", "Controller address");
     const input = el("input", "conn-input");
     input.type = "text";
-    input.placeholder = "nather.local or 192.168.1.50";
+    input.placeholder = "nather.local or 192.168.1.50…";
+    input.name = "controller";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("inputmode", "url");
+    input.setAttribute("autocapitalize", "off");
     input.value = (storageGet(DEVICE_KEY) || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
     input.id = "connAddress";
     label.htmlFor = "connAddress";
-    const btn = el("button", "conn-btn", "Connect");
+    const btn = el("button", "conn-btn", "Connect to Controller");
     btn.type = "submit";
     form.append(label, input, btn);
     form.addEventListener("submit", (e) => { e.preventDefault(); if (input.value.trim()) connectTo(input.value); });

@@ -4,24 +4,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   const menuBtn = document.getElementById("menuBtn");
   const navLinks = document.getElementById("navLinks");
   if (menuBtn && navLinks) {
+    function setMenu(open) {
+      navLinks.classList.toggle("open", open);
+      menuBtn.setAttribute("aria-expanded", open);
+    }
     menuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      navLinks.classList.toggle("open");
+      setMenu(!navLinks.classList.contains("open"));
     });
-    /* on mobile the "Rooms" item opens its submenu instead of navigating;
-       the room links inside it still navigate */
+    /* "Rooms" is a button: it opens the submenu (hover also opens it on desktop) */
     const dd = navLinks.querySelector(".nav-dropdown");
-    const ddToggle = dd && dd.querySelector(":scope > a");
+    const ddToggle = dd && dd.querySelector(".nav-dropdown-toggle");
+    function setDropdown(open) {
+      dd.classList.toggle("open", open);
+      ddToggle.setAttribute("aria-expanded", open);
+    }
     if (ddToggle) {
-      ddToggle.addEventListener("click", (e) => {
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-          dd.classList.toggle("open");
-        }
+      ddToggle.addEventListener("click", () => setDropdown(!dd.classList.contains("open")));
+      dd.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && dd.classList.contains("open")) { setDropdown(false); ddToggle.focus(); }
       });
     }
     document.addEventListener("click", (e) => {
-      if (!e.target.closest(".navbar")) navLinks.classList.remove("open");
+      if (!e.target.closest(".navbar")) {
+        setMenu(false);
+        if (ddToggle) setDropdown(false);
+      }
     });
   }
 
@@ -59,6 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       icon: "&#9898;",
       badge: "Sensor",
       image: "img/pir-sensor.jpg",
+      size: [258, 193],
       description: "The Passive Infrared (PIR) motion sensor detects movement by measuring changes in infrared radiation emitted by warm objects like people or animals. When a warm body moves across the sensor&#8217;s field of view, the difference in infrared levels triggers a HIGH signal. This sensor is ideal for automatic lighting, security systems, and energy-saving applications. Its adjustable sensitivity and delay settings make it versatile for any room.",
       specs: [
         { label: "Model", value: "HC-SR501" },
@@ -72,6 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       icon: "&#9728;",
       badge: "Lighting",
       image: "img/led-light.jpg",
+      size: [1200, 800],
       description: "High-efficiency Light Emitting Diode (LED) designed for smart home illumination. LEDs consume up to 80% less energy than traditional bulbs while providing instant, flicker-free light. Paired with a PWM driver, this LED supports smooth dimming from 0% to 100%, enabling warm sunrises, cozy evenings, or bright task lighting &#8212; all controllable from your device.",
       specs: [
         { label: "Type", value: "SMD 5050" },
@@ -85,6 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       icon: "&#9000;",
       badge: "Controller",
       image: "img/esp32-board.jpg",
+      size: [378, 280],
       description: "The ESP32 is a powerful, low-cost microcontroller with built-in Wi-Fi and Bluetooth. It serves as the brain of the Nather system, handling sensor input, relay control, and wireless communication. It joins your home Wi-Fi, announces itself as nather.local over mDNS, serves this website, and exposes a small REST API with live Server-Sent Events, so every open page updates the moment a light changes.",
       specs: [
         { label: "Chip", value: "ESP32-WROOM-32" },
@@ -98,6 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       icon: "&#8644;",
       badge: "Switching",
       image: "img/relay-module.jpg",
+      size: [550, 550],
       description: "An electromechanical relay module that safely switches high-voltage AC or DC loads using a low-voltage signal from the ESP32. It provides complete isolation between the control circuit and the power circuit, protecting your microcontroller. The built-in optocoupler and flyback diode ensure reliable operation. This module is rated for household lighting circuits and supports both normally-open and normally-closed configurations.",
       specs: [
         { label: "Channels", value: "2-channel" },
@@ -203,6 +215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function onDown(e) {
       dragging = true;
+      if (!e.touches) el.focus({ preventScroll: true });
       const pt = e.touches ? e.touches[0] : e;
       setValue(angleToValue(pt.clientX, pt.clientY), true);
     }
@@ -228,6 +241,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.addEventListener("touchend", onUp);
 
     el.addEventListener("wheel", (e) => {
+      if (document.activeElement !== el) return;   // click the dial first; plain scrolling scrolls the page
       e.preventDefault();
       const delta = e.deltaY > 0 ? -3 : 3;
       setValue(value + delta, false);
@@ -322,9 +336,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (prevBtn) prevBtn.addEventListener("click", prev);
     if (nextBtn) nextBtn.addEventListener("click", next);
 
-    let autoplay = setInterval(next, 5000);
-    track.addEventListener("mouseenter", () => clearInterval(autoplay));
-    track.addEventListener("mouseleave", () => { clearInterval(autoplay); autoplay = setInterval(next, 5000); });
+    /* autoplay: off for reduced motion, pausable, and paused while hovered,
+       focused, or the tab is hidden */
+    const pauseBtn = document.getElementById("galleryPause");
+    const gallery = track.closest(".gallery");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let userPaused = reduceMotion;
+    let hovering = false;
+    let autoplay = null;
+
+    function updateAutoplay() {
+      clearInterval(autoplay);
+      autoplay = null;
+      const focused = gallery && gallery.contains(document.activeElement) && document.activeElement !== pauseBtn;
+      if (!userPaused && !hovering && !focused && !document.hidden) autoplay = setInterval(next, 5000);
+      if (pauseBtn) {
+        pauseBtn.setAttribute("aria-pressed", userPaused);
+        pauseBtn.setAttribute("aria-label", userPaused ? "Play slideshow" : "Pause slideshow");
+        pauseBtn.innerHTML = userPaused ? "&#9654;" : "&#10074;&#10074;";
+      }
+    }
+
+    if (pauseBtn) pauseBtn.addEventListener("click", () => { userPaused = !userPaused; updateAutoplay(); });
+    track.addEventListener("mouseenter", () => { hovering = true; updateAutoplay(); });
+    track.addEventListener("mouseleave", () => { hovering = false; updateAutoplay(); });
+    if (gallery) {
+      gallery.addEventListener("focusin", updateAutoplay);
+      gallery.addEventListener("focusout", () => setTimeout(updateAutoplay, 0));
+    }
+    document.addEventListener("visibilitychange", updateAutoplay);
+    updateAutoplay();
 
     /* ─── GALLERY SWIPE ─── */
     const galleryWrap = track.parentElement;
@@ -400,6 +441,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const img = document.createElement("img");
       img.src = c.image;
       img.alt = c.name;
+      img.width = c.size[0];
+      img.height = c.size[1];
       img.loading = "lazy";
       img.draggable = false;
 
@@ -530,16 +573,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const accordionToggles = document.querySelectorAll(".accordion-header");
   accordionToggles.forEach(header => {
     header.addEventListener("click", () => {
-      const body = header.nextElementSibling;
+      const body = document.getElementById(header.getAttribute("aria-controls"));
       const arrow = header.querySelector(".accordion-arrow");
-      if (body && body.classList.contains("accordion-body")) {
+      if (body) {
         const open = body.classList.toggle("open");
         if (arrow) arrow.classList.toggle("open", open);
         header.setAttribute("aria-expanded", open);
       }
-    });
-    header.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); header.click(); }
     });
   });
 
@@ -683,16 +723,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (e.target.closest("a")) return;
       openRoomDetail(card.dataset.room);
     });
-    roomGrid.querySelectorAll(".room-card").forEach(card => {
-      card.setAttribute("tabindex", "0");
-      card.setAttribute("role", "button");
-      card.addEventListener("keydown", (e) => {
-        if (e.target === card && (e.key === "Enter" || e.key === " ")) {
-          e.preventDefault();
-          openRoomDetail(card.dataset.room);
-        }
-      });
-    });
     device.onChange(() => { updateRoomUI(); syncDetail(); });
     updateRoomUI();
   }
@@ -721,10 +751,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const lightReading = document.getElementById("lightReading");
   const simMotionBtn = document.getElementById("simMotionBtn");
 
+  const relTime = new Intl.RelativeTimeFormat(navigator.language || "en", { numeric: "auto", style: "short" });
   function agoText(s) {
-    if (s < 60) return s + "s ago";
-    if (s < 3600) return Math.floor(s / 60) + " min ago";
-    return Math.floor(s / 3600) + " h ago";
+    if (s < 60) return relTime.format(-s, "second");
+    if (s < 3600) return relTime.format(-Math.floor(s / 60), "minute");
+    return relTime.format(-Math.floor(s / 3600), "hour");
   }
 
   function renderEntry() {
@@ -741,7 +772,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (autoStatusText) {
       if (s.motion) autoStatusText.textContent = "Motion detected";
       else if (s.lastMotionAgo !== null) autoStatusText.textContent = "No motion · last seen " + agoText(s.lastMotionAgo);
-      else autoStatusText.textContent = "Waiting for motion...";
+      else autoStatusText.textContent = "Waiting for motion…";
     }
     if (lightReading) {
       lightReading.textContent = s.light === null
@@ -752,10 +783,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (autoGrid) {
-    autoGrid.querySelectorAll(".auto-room-card").forEach(card => {
-      card.setAttribute("tabindex", "0");
-      card.setAttribute("role", "button");
-    });
     function toggleEntryRoom(card) {
       const room = card.dataset.autoRoom;
       const list = device.state.entryRooms.slice();
@@ -767,10 +794,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     autoGrid.addEventListener("click", (e) => {
       const card = e.target.closest(".auto-room-card");
       if (card) toggleEntryRoom(card);
-    });
-    autoGrid.addEventListener("keydown", (e) => {
-      const card = e.target.closest(".auto-room-card");
-      if (card && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleEntryRoom(card); }
     });
     if (simMotionBtn) simMotionBtn.addEventListener("click", () => device.simulateMotion());
     device.onChange(renderEntry);

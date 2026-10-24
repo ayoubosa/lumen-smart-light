@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07070e" />
   <title>Nather — Room</title>
   <meta name="description" content="Control your room's smart light — toggle, dim, and customize." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,16 +12,17 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to Content</a>
 
   <nav class="navbar">
     <div class="container">
-      <a href="index.html" class="logo">Nath<span>er</span></a>
+      <a href="index.html" class="logo" translate="no">Nath<span>er</span></a>
       <ul class="nav-links" id="navLinks">
         <li><a href="index.html">Home</a></li>
         <li><a href="control.html">Control Panel</a></li>
         <li class="nav-dropdown">
-          <a href="#">Rooms &#9662;</a>
-          <div class="dropdown-menu">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-controls="roomsMenu">Rooms</button>
+          <div class="dropdown-menu" id="roomsMenu">
             <a href="room.html?id=living">Living Room</a>
             <a href="room.html?id=bedroom">Bedroom</a>
             <a href="room.html?id=kitchen">Kitchen</a>
@@ -29,25 +31,25 @@
             <a href="room.html?id=garage">Garage</a>
           </div>
         </li>      </ul>
-      <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">&#9776;</button>
     </div>
   </nav>
 
-  <main>
+  <main id="main">
     <section class="section" style="padding-top:16px">
       <div class="container">
 
         <a href="control.html" class="rp-back-link">&#8592; Back to Control Panel</a>
 
         <div class="rp-nav-bar">
-          <button class="rp-nav-btn" id="rpPrevBtn" aria-label="Previous room">&#8592;</button>
+          <button type="button" class="rp-nav-btn" id="rpPrevBtn" aria-label="Previous room">&#8592;</button>
           <span class="rp-counter" id="rpCounter">1 / 6</span>
-          <button class="rp-nav-btn" id="rpNextBtn" aria-label="Next room">&#8594;</button>
+          <button type="button" class="rp-nav-btn" id="rpNextBtn" aria-label="Next room">&#8594;</button>
         </div>
 
         <div class="rp-room-panel" id="roomPanel">
           <div class="room-page-hero">
-            <span class="rp-icon" id="rpIcon">&#127968;</span>
+            <span class="rp-icon" id="rpIcon" aria-hidden="true">&#127968;</span>
             <h1 id="rpName">Living Room</h1>
             <p id="rpSub">Adjust your smart light</p>
           </div>
@@ -68,12 +70,12 @@
 
           <div class="status">
             <span class="status-dot" id="rpStatusDot"></span>
-            <span class="status-text" id="rpStatusText">Off</span>
+            <span class="status-text" id="rpStatusText" aria-live="polite">Off</span>
           </div>
 
           <div class="rp-toggle-row">
             <span class="toggle-label" id="rpToggleLabel">OFF</span>
-            <button class="toggle" id="rpToggle" aria-label="Toggle light"></button>
+            <button class="toggle" id="rpToggle" type="button" aria-label="Room light" aria-pressed="false"></button>
           </div>
 
           <div class="brightness-knob-wrap rp-knob-row">
@@ -95,7 +97,7 @@
                 <div class="knob-unit">%</div>
               </div>
             </div>
-            <span class="knob-hint">Drag or scroll to adjust brightness</span>
+            <span class="knob-hint">Drag, scroll or use arrow keys to adjust brightness</span>
           </div>
         </div>
 

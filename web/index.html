@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07070e" />
   <title>Nather — Smart Light Control</title>
   <meta name="description" content="Nather smart light system — control your lights from the browser. View components and product gallery." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,16 +12,17 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to Content</a>
 
   <nav class="navbar">
     <div class="container">
-      <a href="index.html" class="logo">Nath<span>er</span></a>
+      <a href="index.html" class="logo" translate="no">Nath<span>er</span></a>
       <ul class="nav-links" id="navLinks">
         <li><a href="index.html" class="active">Home</a></li>
         <li><a href="control.html">Control Panel</a></li>
         <li class="nav-dropdown">
-          <a href="#">Rooms &#9662;</a>
-          <div class="dropdown-menu">
+          <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-controls="roomsMenu">Rooms</button>
+          <div class="dropdown-menu" id="roomsMenu">
             <a href="room.html?id=living">Living Room</a>
             <a href="room.html?id=bedroom">Bedroom</a>
             <a href="room.html?id=kitchen">Kitchen</a>
@@ -30,11 +32,11 @@
           </div>
         </li>
       </ul>
-      <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">&#9776;</button>
     </div>
   </nav>
 
-  <main>
+  <main id="main">
     <section class="section" style="padding-bottom:0">
       <div class="container">
 
@@ -55,12 +57,12 @@
 
           <div class="status">
             <span class="status-dot" id="statusDot"></span>
-            <span class="status-text" id="statusText">Off</span>
+            <span class="status-text" id="statusText" aria-live="polite">Off</span>
           </div>
 
           <div class="toggle-wrapper">
             <span class="toggle-label" id="toggleLabel">OFF</span>
-            <button class="toggle" id="lightToggle" aria-label="Toggle light"></button>
+            <button class="toggle" id="lightToggle" type="button" aria-label="Living room light" aria-pressed="false"></button>
           </div>
 
           <div class="brightness-knob-wrap">
@@ -82,7 +84,7 @@
                 <div class="knob-unit">%</div>
               </div>
             </div>
-            <span class="knob-hint">Drag to adjust brightness</span>
+            <span class="knob-hint">Drag, scroll or use arrow keys to adjust brightness</span>
           </div>
 
           <div class="product-info">
@@ -105,15 +107,16 @@
           <div class="gallery-header">
             <h2>Product Gallery</h2>
             <div class="gallery-nav">
-              <button class="gallery-btn" id="galleryPrev" aria-label="Previous">&#8592;</button>
-              <button class="gallery-btn" id="galleryNext" aria-label="Next">&#8594;</button>
+              <button class="gallery-btn" id="galleryPause" type="button" aria-label="Pause slideshow" aria-pressed="false">&#10074;&#10074;</button>
+              <button class="gallery-btn" id="galleryPrev" type="button" aria-label="Previous slide">&#8592;</button>
+              <button class="gallery-btn" id="galleryNext" type="button" aria-label="Next slide">&#8594;</button>
             </div>
           </div>
           <div class="gallery-track-wrapper">
             <div class="gallery-track" id="galleryTrack">
-              <div class="gallery-slide"><img src="img/smart-light-1.jpg" alt="Smart light view 1" loading="lazy" /></div>
-              <div class="gallery-slide"><img src="img/smart-light-2.jpg" alt="Smart light view 2" loading="lazy" /></div>
-              <div class="gallery-slide"><img src="img/smart-light-3.jpg" alt="Smart light view 3" loading="lazy" /></div>
+              <div class="gallery-slide"><img src="img/smart-light-1.jpg" alt="Smart light view 1" width="1448" height="1086" loading="lazy" draggable="false" /></div>
+              <div class="gallery-slide"><img src="img/smart-light-2.jpg" alt="Smart light view 2" width="946" height="2048" loading="lazy" draggable="false" /></div>
+              <div class="gallery-slide"><img src="img/smart-light-3.jpg" alt="Smart light view 3" width="1448" height="1086" loading="lazy" draggable="false" /></div>
             </div>
           </div>
           <div class="gallery-dots" id="galleryDots"></div>
@@ -129,31 +132,31 @@
         <div class="components-grid">
 
           <a href="component.html?id=pir" class="component-card">
-            <div class="comp-icon-wrap">&#9898;</div>
+            <div class="comp-icon-wrap" aria-hidden="true">&#9898;</div>
             <h3>PIR Motion Sensor</h3>
             <p>Detects motion using passive infrared technology</p>
-            <span class="comp-arrow">&#8594;</span>
+            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
           </a>
 
           <a href="component.html?id=led" class="component-card">
-            <div class="comp-icon-wrap">&#9728;</div>
+            <div class="comp-icon-wrap" aria-hidden="true">&#9728;</div>
             <h3>LED Light</h3>
             <p>Energy-efficient lighting with adjustable brightness</p>
-            <span class="comp-arrow">&#8594;</span>
+            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
           </a>
 
           <a href="component.html?id=esp32" class="component-card">
-            <div class="comp-icon-wrap">&#9000;</div>
+            <div class="comp-icon-wrap" aria-hidden="true">&#9000;</div>
             <h3>ESP32</h3>
             <p>Wi-Fi and Bluetooth microcontroller for IoT control</p>
-            <span class="comp-arrow">&#8594;</span>
+            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
           </a>
 
           <a href="component.html?id=relay" class="component-card">
-            <div class="comp-icon-wrap">&#8644;</div>
+            <div class="comp-icon-wrap" aria-hidden="true">&#8644;</div>
             <h3>Relay Module</h3>
             <p>Switches high-power devices safely via low signal</p>
-            <span class="comp-arrow">&#8594;</span>
+            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
           </a>
 
         </div>
