@@ -6,6 +6,7 @@
                    GET  api/state         full state
                    PUT  api/rooms/{id}    {brightness} or {on}
                    PUT  api/entry-rooms   {rooms: [...]}
+                   PUT  api/mode          {mode: "auto" | "manual"}
                    GET  api/events        Server-Sent Events push
    demo mode   — no controller answered, so a simulated one runs in the
                  browser (js/engine.js) and state lives in localStorage.
@@ -199,7 +200,7 @@
     engine.load(readDemoState());
     engine.onChange(() => {
       state = demoSnapshot();
-      storageSet(DEMO_KEY, JSON.stringify({ rooms: state.rooms, entryRooms: state.entryRooms }));
+      storageSet(DEMO_KEY, JSON.stringify({ mode: state.mode, rooms: state.rooms, entryRooms: state.entryRooms }));
       emit();
     });
     state = demoSnapshot();
@@ -252,6 +253,16 @@
     emit();
     withAuth(() => request("PUT", "api/entry-rooms", { rooms: list }))
       .then(res => { state.entryRooms = res.rooms; lastError = null; emit(); })
+      .catch(err => { lastError = err.message; refresh(); });
+  }
+
+  function setMode(next) {
+    if (mode === "demo") { engine.setMode(next); return; }
+    state.mode = next;
+    if (next === "manual") Object.values(state.rooms).forEach(r => { r.auto = false; });
+    emit();
+    withAuth(() => request("PUT", "api/mode", { mode: next }))
+      .then(res => { state.mode = res.mode; lastError = null; emit(); })
       .catch(err => { lastError = err.message; refresh(); });
   }
 
@@ -437,6 +448,7 @@
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     setRoom,
     setEntryRooms,
+    setMode,
     simulateMotion,
     connectTo,
     useDemo,

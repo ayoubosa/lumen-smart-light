@@ -74,6 +74,7 @@
       rooms[id] = { on: false, brightness: 0, last: cfg.defaultOnBrightness, auto: false, hw: cfg.hardware[id] || "none" };
     });
     let entryRooms = [];
+    let mode = "auto";   // "auto": motion lighting runs; "manual": only people switch lights
     const sensors = { motion: false, lastMotionAt: null, light: null };
 
     function isDark() {
@@ -96,7 +97,7 @@
     }
 
     function snapshot() {
-      const out = { rooms: {}, entryRooms: entryRooms.slice(), sensors: {} };
+      const out = { mode, rooms: {}, entryRooms: entryRooms.slice(), sensors: {} };
       ROOM_IDS.forEach(id => { out.rooms[id] = roomSnapshot(id); });
       out.sensors = {
         motion: sensors.motion,
@@ -125,13 +126,24 @@
       return entryRooms.slice();
     }
 
-    /* PIR edge. Rising edge switches entry rooms on when it is dark. */
+    /* Auto/Manual, like the original app. Going to manual hands any
+       motion-lit room over to the user, so auto-off will not touch it. */
+    function setMode(next) {
+      if (next !== "auto" && next !== "manual") throw httpError(400, "mode must be \"auto\" or \"manual\"");
+      mode = next;
+      if (mode === "manual") ROOM_IDS.forEach(id => { rooms[id].auto = false; });
+      emit("mode");
+      return mode;
+    }
+
+    /* PIR edge. In auto mode a rising edge switches entry rooms on when it is dark.
+       Motion is still reported in manual mode. */
     function setMotion(active) {
       active = !!active;
       const turnedOn = [];
       if (active) {
         sensors.lastMotionAt = now();
-        if (isDark()) {
+        if (mode === "auto" && isDark()) {
           entryRooms.forEach(id => {
             const r = rooms[id];
             if (!r.on) {
@@ -160,7 +172,7 @@
     /* Call every few seconds: switches off rooms that motion turned on
        once nobody has moved for autoOffSeconds. */
     function tick() {
-      if (!cfg.autoOffSeconds || sensors.motion || sensors.lastMotionAt === null) return [];
+      if (mode !== "auto" || !cfg.autoOffSeconds || sensors.motion || sensors.lastMotionAt === null) return [];
       if (now() - sensors.lastMotionAt < cfg.autoOffSeconds * 1000) return [];
       const turnedOff = [];
       ROOM_IDS.forEach(id => {
@@ -190,6 +202,7 @@
         });
       }
       if (Array.isArray(saved.entryRooms)) entryRooms = saved.entryRooms.filter(id => rooms[id]);
+      if (saved.mode === "auto" || saved.mode === "manual") mode = saved.mode;
     }
 
     function onChange(fn) {
@@ -197,7 +210,7 @@
       return () => listeners.delete(fn);
     }
 
-    return { snapshot, setRoom, setEntryRooms, setMotion, setLight, tick, load, onChange, config: cfg };
+    return { snapshot, setRoom, setEntryRooms, setMode, setMotion, setLight, tick, load, onChange, config: cfg };
   }
 
   return { ROOM_IDS, DEFAULTS, applyPatch, clampBrightness, createEngine };

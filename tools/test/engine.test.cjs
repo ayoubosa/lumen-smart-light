@@ -108,12 +108,52 @@ test("auto-off waits while motion is still active", () => {
   assert.deepEqual(e.tick(), []);
 });
 
+test("mode starts in auto", () => {
+  assert.equal(createEngine().snapshot().mode, "auto");
+});
+
+test("manual mode: motion is reported but switches nothing on", () => {
+  const e = createEngine();
+  e.setEntryRooms(["hallway"]);
+  e.setMode("manual");
+  assert.deepEqual(e.setMotion(true), []);
+  const s = e.snapshot();
+  assert.equal(s.sensors.motion, true);
+  assert.equal(s.rooms.hallway.on, false);
+});
+
+test("going manual hands motion-lit rooms to the user, so auto-off leaves them", () => {
+  const now = clock();
+  const e = createEngine({ autoOffSeconds: 60, now });
+  e.setEntryRooms(["hallway"]);
+  e.setMotion(true);
+  e.setMotion(false);
+  e.setMode("manual");
+  assert.equal(e.snapshot().rooms.hallway.auto, false);
+  now.advance(120000);
+  assert.deepEqual(e.tick(), []);
+  assert.equal(e.snapshot().rooms.hallway.on, true);
+});
+
+test("back to auto: motion lighting runs again", () => {
+  const e = createEngine();
+  e.setEntryRooms(["garage"]);
+  e.setMode("manual");
+  e.setMode("auto");
+  assert.deepEqual(e.setMotion(true), ["garage"]);
+});
+
+test("unknown mode is rejected", () => {
+  assert.throws(() => createEngine().setMode("party"), { status: 400 });
+});
+
 test("load restores saved rooms and ignores unknown ids", () => {
   const e = createEngine();
-  e.load({ rooms: { living: { on: true, brightness: 65 }, attic: { on: true, brightness: 10 } }, entryRooms: ["living", "attic"] });
+  e.load({ mode: "manual", rooms: { living: { on: true, brightness: 65 }, attic: { on: true, brightness: 10 } }, entryRooms: ["living", "attic"] });
   const s = e.snapshot();
   assert.equal(s.rooms.living.brightness, 65);
   assert.deepEqual(s.entryRooms, ["living"]);
+  assert.equal(s.mode, "manual");
 });
 
 test("applyPatch is usable on its own for optimistic UI updates", () => {

@@ -17,6 +17,7 @@ check it.
 | `GET` | `/api/state` | – | Full state (below) |
 | `PUT` | `/api/rooms/{id}` | `{"brightness": 0-100}` or `{"on": true\|false}` | The updated room |
 | `PUT` | `/api/entry-rooms` | `{"rooms": ["hallway", "living"]}` | `{"rooms": [...]}` |
+| `PUT` | `/api/mode` | `{"mode": "auto"}` or `{"mode": "manual"}` | `{"mode": "..."}` |
 | `GET` | `/api/events` | – | Server-Sent Events stream |
 | `POST` | `/api/sim/motion` | `{}` | Mock only: one 3-second motion pulse |
 | `POST` | `/api/sim/light` | `{"light": 0-100}` | Mock only: set the ambient light |
@@ -29,6 +30,14 @@ Room ids: `living`, `bedroom`, `kitchen`, `bathroom`, `hallway`, `garage`.
 - `{"on": true}` restores the room's last non-zero brightness (50 % the first time).
 - Any write marks the room as manual (`auto: false`), so auto-off leaves it alone.
 - The UI always sends an absolute `brightness`. Repeating a request is harmless, and only the latest value matters.
+
+### Auto and Manual mode
+
+Same idea as the original graduation-project app.
+
+- `auto` (default): motion switches on the entry rooms when it is dark, and auto-off switches them off after 5 minutes without movement.
+- `manual`: motion is still reported in `sensors`, but nothing switches by itself. Switching to manual also clears `auto` on every room, so a light that motion turned on stays on until someone switches it off.
+- The mode survives a reboot (saved in NVS, like the entry rooms).
 
 ### Errors
 
@@ -45,6 +54,7 @@ Every error is JSON: `{"error": "message"}`.
 
 ```json
 {
+  "mode": "auto",
   "device": {
     "name": "nather",
     "hostname": "nather.local",

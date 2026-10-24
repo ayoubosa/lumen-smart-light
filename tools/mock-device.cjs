@@ -178,6 +178,11 @@ function createMockDevice(options) {
         return send(res, 200, { rooms: engine.setEntryRooms(body && body.rooms) });
       }
 
+      if (p === "/api/mode" && req.method === "PUT") {
+        const body = await readJson(req);
+        return send(res, 200, { mode: engine.setMode(body && body.mode) });
+      }
+
       if (p === "/api/sim/motion" && req.method === "POST") {
         const turnedOn = engine.setMotion(true);
         setTimeout(() => engine.setMotion(false), MOTION_PULSE_MS).unref();
@@ -212,7 +217,7 @@ if (require.main === module) {
   const { server } = createMockDevice({ token: process.env.NATHER_TOKEN || "" });
   server.listen(port, () => {
     console.log("Nather mock controller on http://localhost:" + port + "/");
-    console.log("API: GET /api/state · PUT /api/rooms/{id} · PUT /api/entry-rooms · GET /api/events");
+    console.log("API: GET /api/state, PUT /api/rooms/{id}, PUT /api/entry-rooms, PUT /api/mode, GET /api/events");
     if (process.env.NATHER_TOKEN) console.log("Writes need: Authorization: Bearer <NATHER_TOKEN>");
   });
 }

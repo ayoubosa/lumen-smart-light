@@ -88,6 +88,13 @@ rooms that motion switched on are turned off: a room someone set by hand is
 never switched off by the timer. 30 % is a starting point for an LDR with a
 10 kΩ divider and must be calibrated per install (`WIRING.md`).
 
+**Auto/Manual mode, as in the original app.**
+The graduation-project app had an Automatic/Manual switch, so the web app
+keeps it. Manual stops motion from switching lights but still shows motion,
+so you can test the sensor without lights reacting. Going to Manual hands
+every motion-lit room to the user (clears `auto`); otherwise auto-off would
+switch a light off later, in a mode that promises nothing switches by itself.
+
 **No light sensor counts as always dark.**
 Without an LDR, the system behaves like the original project: motion always
 switches the selected rooms on.
@@ -95,10 +102,10 @@ switches the selected rooms on.
 **PIR ignored for the first 30 s after boot.**
 The HC-SR501 fires false triggers while it settles after power-on.
 
-**After a power cut, lights come back off. Only the entry-room choice is saved.**
+**After a power cut, lights come back off. Only the entry rooms and the mode are saved.**
 Lights switching on by themselves at 3 a.m. after a power blip is worse than
 pressing a switch again. The entry-room selection is a setting, so it is kept
-in NVS, and written only when it changes to spare the flash.
+in NVS together with the Auto/Manual mode, and written only when it changes to spare the flash.
 
 ## Tooling
 

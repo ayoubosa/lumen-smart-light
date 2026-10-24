@@ -40,6 +40,7 @@ struct Room {
 
 static Room rooms[ROOM_COUNT];
 static bool entry[ROOM_COUNT];
+static bool autoMode = true;             // Auto: motion lighting runs. Manual: only people switch lights.
 
 static bool motion = false;
 static bool everMotion = false;
@@ -162,7 +163,7 @@ static void onMotion(bool active) {
   if (active) {
     everMotion = true;
     lastMotionMs = millis();
-    if (isDark()) {
+    if (autoMode && isDark()) {
       for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         Room& r = rooms[i];
         if (entry[i] && !r.on) {
@@ -181,7 +182,7 @@ static void onMotion(bool active) {
 }
 
 static void checkAutoOff(uint32_t now) {
-  if (AUTO_OFF_SECONDS == 0 || motion || !everMotion) return;
+  if (!autoMode || AUTO_OFF_SECONDS == 0 || motion || !everMotion) return;
   if (now - lastMotionMs < AUTO_OFF_SECONDS * 1000UL) return;
   StateLock lock;
   for (uint8_t i = 0; i < ROOM_COUNT; i++) {
@@ -223,11 +224,16 @@ static void readLight(uint32_t now) {
 static void readLight(uint32_t) {}
 #endif
 
-// ── Persistence (only the entry-room choice survives a reboot) ──
+// ── Persistence (the entry-room choice and the mode survive a reboot) ──
 
-static void loadEntry() {
+static void loadSettings() {
   const uint16_t mask = prefs.getUShort("entry", 0);
   for (uint8_t i = 0; i < ROOM_COUNT; i++) entry[i] = mask & (1U << i);
+  autoMode = prefs.getBool("auto", true);
+}
+
+static void saveMode() {
+  if (prefs.getBool("auto", true) != autoMode) prefs.putBool("auto", autoMode);
 }
 
 static void saveEntry() {
@@ -247,6 +253,7 @@ static void roomJson(JsonObject out, uint8_t i) {
 }
 
 static void buildState(JsonDocument& doc) {
+  doc["mode"] = autoMode ? "auto" : "manual";
   JsonObject dev = doc["device"].to<JsonObject>();
   dev["name"] = DEVICE_HOSTNAME;
   dev["hostname"] = DEVICE_HOSTNAME ".local";
@@ -386,6 +393,23 @@ static void handleEntryPut(AsyncWebServerRequest* req) {
   sendJson(req, 200, s);
 }
 
+// Auto/Manual. Going manual hands motion-lit rooms to the user, so auto-off leaves them.
+static void handleModePut(AsyncWebServerRequest* req) {
+  JsonDocument body;
+  if (!readWrite(req, body)) return;
+  const String mode = body["mode"] | "";
+  if (mode != "auto" && mode != "manual") { sendError(req, 400, "mode must be \"auto\" or \"manual\""); return; }
+  {
+    StateLock lock;
+    autoMode = mode == "auto";
+    if (!autoMode) for (uint8_t i = 0; i < ROOM_COUNT; i++) rooms[i].autoOn = false;
+  }
+  saveMode();
+  stateDirty = true;
+  sendJson(req, 200, autoMode ? "{\"mode\":\"auto\"}" : "{\"mode\":\"manual\"}");
+  Serial.printf("[api] mode -> %s\n", mode.c_str());
+}
+
 static void setupServer() {
   // Allow a dashboard served from another origin (e.g. a laptop) to call the API.
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
@@ -395,6 +419,7 @@ static void setupServer() {
   server.on("/api/state", HTTP_GET, [](AsyncWebServerRequest* req) { sendJson(req, 200, stateJson()); });
   server.on("/api/rooms/*", HTTP_PUT, handleRoomPut, nullptr, collectBody);
   server.on("/api/entry-rooms", HTTP_PUT, handleEntryPut, nullptr, collectBody);
+  server.on("/api/mode", HTTP_PUT, handleModePut, nullptr, collectBody);
 
   events.onConnect([](AsyncEventSourceClient* client) {
     Serial.printf("[sse] client connected (%u open)\n", (unsigned)events.count());
@@ -490,7 +515,7 @@ void setup() {
   pinMode(PIR_PIN, INPUT_PULLDOWN);    // reads "no motion" if the sensor is unplugged
 
   prefs.begin("nather", false);
-  loadEntry();
+  loadSettings();
 
   if (!LittleFS.begin(true)) Serial.println("[fs] LittleFS mount failed");
   else if (!LittleFS.exists("/index.html")) Serial.println("[fs] website missing: run `pio run -t uploadfs`");

@@ -30,6 +30,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const motionStatus = document.getElementById("motionStatus");
   const lightStatus = document.getElementById("lightStatus");
   const simMotionBtn = document.getElementById("simMotionBtn");
+  const modeRadios = document.querySelectorAll('input[name="mode"]');
+  const modeHelp = document.getElementById("modeHelp");
+  const entryFieldset = document.querySelector(".entry-rooms");
+
+  const MODE_HELP = {
+    auto: "Auto: when the motion sensor sees someone and it is dark, the rooms you tick turn on at 70%. They turn off again after 5 minutes without movement.",
+    manual: "Manual: the motion sensor does not switch anything. Lights only change when you use the switches above. Your ticked rooms are kept for when you go back to Auto."
+  };
 
   await device.ready;
   const st = () => device.state;
@@ -164,8 +172,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     checks[id] = box;
   });
 
+  modeRadios.forEach(radio => {
+    radio.addEventListener("change", () => { if (radio.checked) device.setMode(radio.value); });
+  });
+
   function renderMotion() {
     const s = st();
+    const current = s.mode === "manual" ? "manual" : "auto";
+    modeRadios.forEach(radio => { radio.checked = radio.value === current; });
+    if (modeHelp.dataset.mode !== current) {   // only re-announce on a real change
+      modeHelp.dataset.mode = current;
+      modeHelp.textContent = MODE_HELP[current];
+    }
+    entryFieldset.classList.toggle("is-paused", current === "manual");
     ROOMS.forEach(([id]) => { checks[id].checked = s.entryRooms.includes(id); });
     const sens = s.sensors;
     motionStatus.dataset.active = sens.motion;

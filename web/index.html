@@ -38,8 +38,14 @@
     </section>
 
     <section aria-labelledby="motionTitle" class="motion">
-      <h2 id="motionTitle">Motion lighting</h2>
-      <p class="muted">When the motion sensor sees someone and it is dark, the rooms you tick turn on at 70%. They turn off again after 5 minutes without movement.</p>
+      <div class="section-head">
+        <h2 id="motionTitle">Motion lighting</h2>
+        <div class="segmented" role="radiogroup" aria-label="Motion lighting mode">
+          <label><input type="radio" name="mode" value="auto" checked /><span>Auto</span></label>
+          <label><input type="radio" name="mode" value="manual" /><span>Manual</span></label>
+        </div>
+      </div>
+      <p class="muted" id="modeHelp" aria-live="polite">Auto: when the motion sensor sees someone and it is dark, the rooms you tick turn on at 70%. They turn off again after 5 minutes without movement.</p>
 
       <fieldset class="entry-rooms">
         <legend>Turn on when someone arrives</legend>

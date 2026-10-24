@@ -69,6 +69,19 @@ test("PUT /api/entry-rooms + simulated motion switches rooms on", async (t) => {
   assert.equal(s.sensors.motion, true);
 });
 
+test("PUT /api/mode switches between auto and manual", async (t) => {
+  const d = await start();
+  t.after(d.close);
+  assert.equal((await (await fetch(d.base + "/api/state")).json()).mode, "auto");
+  let res = await put(d.base, "/api/mode", { mode: "manual" });
+  assert.deepEqual(await res.json(), { mode: "manual" });
+  await put(d.base, "/api/entry-rooms", { rooms: ["hallway"] });
+  res = await fetch(d.base + "/api/sim/motion", { method: "POST" });
+  assert.deepEqual(await res.json(), { turnedOn: [] });
+  res = await put(d.base, "/api/mode", { mode: "disco" });
+  assert.equal(res.status, 400);
+});
+
 test("writes need the token when one is set; reads stay open", async (t) => {
   const d = await start({ token: "s3cret" });
   t.after(d.close);
