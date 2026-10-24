@@ -50,8 +50,8 @@ npm start          # mock controller + website on http://localhost:8080
 npm test           # rules engine + HTTP contract tests (Node 20+)
 ```
 
-Open the control panel, select a room under *Entry Lighting*, and press
-**Simulate motion**. Open a second tab to watch both stay in sync.
+Tick a room under *Motion lighting* and press **Simulate Motion**. Open a
+second tab to watch both stay in sync.
 
 ### On an ESP32
 

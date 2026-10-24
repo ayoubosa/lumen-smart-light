@@ -3,114 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07070e" />
-  <title>Nather — Room</title>
-  <meta name="description" content="Control your room's smart light — toggle, dim, and customize." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <title>Moved | Nather</title>
+  <meta http-equiv="refresh" content="0; url=index.html" />
+  <link rel="canonical" href="index.html" />
+  <script>
+    /* this page moved; keep the room or part the old link pointed at */
+    var id = new URLSearchParams(location.search).get("id");
+    location.replace("index.html" + (id && /^[a-z0-9]+$/.test(id) ? "#room-" + id : ""));
+  </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to Content</a>
-
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="logo" translate="no">Nath<span>er</span></a>
-      <ul class="nav-links" id="navLinks">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="control.html">Control Panel</a></li>
-        <li class="nav-dropdown">
-          <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-controls="roomsMenu">Rooms</button>
-          <div class="dropdown-menu" id="roomsMenu">
-            <a href="room.html?id=living">Living Room</a>
-            <a href="room.html?id=bedroom">Bedroom</a>
-            <a href="room.html?id=kitchen">Kitchen</a>
-            <a href="room.html?id=bathroom">Bathroom</a>
-            <a href="room.html?id=hallway">Hallway</a>
-            <a href="room.html?id=garage">Garage</a>
-          </div>
-        </li>      </ul>
-      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">&#9776;</button>
-    </div>
-  </nav>
-
-  <main id="main">
-    <section class="section" style="padding-top:16px">
-      <div class="container">
-
-        <a href="control.html" class="rp-back-link">&#8592; Back to Control Panel</a>
-
-        <div class="rp-nav-bar">
-          <button type="button" class="rp-nav-btn" id="rpPrevBtn" aria-label="Previous room">&#8592;</button>
-          <span class="rp-counter" id="rpCounter">1 / 6</span>
-          <button type="button" class="rp-nav-btn" id="rpNextBtn" aria-label="Next room">&#8594;</button>
-        </div>
-
-        <div class="rp-room-panel" id="roomPanel">
-          <div class="room-page-hero">
-            <span class="rp-icon" id="rpIcon" aria-hidden="true">&#127968;</span>
-            <h1 id="rpName">Living Room</h1>
-            <p id="rpSub">Adjust your smart light</p>
-          </div>
-
-          <div class="bulb-wrapper" id="rpBulbWrapper">
-            <div class="bulb-glow" id="rpBulbGlow"></div>
-            <svg class="bulb-svg" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ellipse class="bulb-glass" id="rpBulbGlass" cx="100" cy="100" rx="65" ry="80" fill="#1a1a2e" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
-              <path class="bulb-filament" d="M100 55 L95 75 L105 75 Z" fill="#f5c542" opacity="0.3"/>
-              <path class="bulb-filament" d="M90 85 C95 95, 105 95, 110 85" stroke="#f5c542" stroke-width="2" fill="none" opacity="0.3"/>
-              <rect x="82" y="175" width="36" height="8" rx="2" fill="#333"/>
-              <rect x="78" y="183" width="44" height="12" rx="3" fill="#2a2a2a"/>
-              <rect x="82" y="195" width="36" height="20" rx="4" fill="#222"/>
-              <rect x="86" y="215" width="28" height="12" rx="3" fill="#1a1a1a"/>
-              <rect x="90" y="227" width="20" height="8" rx="10" fill="#111"/>
-            </svg>
-          </div>
-
-          <div class="status">
-            <span class="status-dot" id="rpStatusDot"></span>
-            <span class="status-text" id="rpStatusText" aria-live="polite">Off</span>
-          </div>
-
-          <div class="rp-toggle-row">
-            <span class="toggle-label" id="rpToggleLabel">OFF</span>
-            <button class="toggle" id="rpToggle" type="button" aria-label="Room light" aria-pressed="false"></button>
-          </div>
-
-          <div class="brightness-knob-wrap rp-knob-row">
-            <div class="knob-container" id="rpKnob">
-              <svg viewBox="0 0 200 200">
-                <defs>
-                  <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#f5b342"/>
-                    <stop offset="100%" stop-color="#f5c542"/>
-                  </linearGradient>
-                </defs>
-                <circle class="knob-track" cx="100" cy="100" r="70"/>
-                <circle class="knob-fill" id="rpKnobFill" cx="100" cy="100" r="70"/>
-                <circle class="knob-handle" id="rpKnobHandle" cx="170" cy="100" r="8"/>
-                <circle class="knob-handle-inner" cx="170" cy="100" r="3"/>
-              </svg>
-              <div class="knob-label">
-                <div class="knob-value" id="rpKnobValue">0</div>
-                <div class="knob-unit">%</div>
-              </div>
-            </div>
-            <span class="knob-hint">Drag, scroll or use arrow keys to adjust brightness</span>
-          </div>
-        </div>
-
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="container">&copy; 2026 Nather.</div>
-  </footer>
-
-  <script src="js/engine.js"></script>
-  <script src="js/device.js"></script>
-  <script src="js/script.js"></script>
+  <p>This page moved to <a href="index.html">Lights</a>.</p>
 </body>
 </html>

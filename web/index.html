@@ -3,170 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07070e" />
-  <title>Nather — Smart Light Control</title>
-  <meta name="description" content="Nather smart light system — control your lights from the browser. View components and product gallery." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
+  <title>Lights | Nather</title>
+  <meta name="description" content="Switch each room's light on or off and set its brightness. Nather is an ESP32 smart-lighting controller on your Wi-Fi." />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to Content</a>
 
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="logo" translate="no">Nath<span>er</span></a>
-      <ul class="nav-links" id="navLinks">
-        <li><a href="index.html" class="active">Home</a></li>
-        <li><a href="control.html">Control Panel</a></li>
-        <li class="nav-dropdown">
-          <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-controls="roomsMenu">Rooms</button>
-          <div class="dropdown-menu" id="roomsMenu">
-            <a href="room.html?id=living">Living Room</a>
-            <a href="room.html?id=bedroom">Bedroom</a>
-            <a href="room.html?id=kitchen">Kitchen</a>
-            <a href="room.html?id=bathroom">Bathroom</a>
-            <a href="room.html?id=hallway">Hallway</a>
-            <a href="room.html?id=garage">Garage</a>
-          </div>
-        </li>
-      </ul>
-      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">&#9776;</button>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a href="index.html" class="brand" translate="no">Nather</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="index.html" aria-current="page">Lights</a>
+        <a href="how-it-works.html">How It Works</a>
+      </nav>
     </div>
-  </nav>
+  </header>
 
-  <main id="main">
-    <section class="section" style="padding-bottom:0">
-      <div class="container">
-
-        <div class="bulb-section">
-          <div class="bulb-wrapper">
-            <div class="bulb-glow" id="bulbGlow"></div>
-            <svg class="bulb-svg" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ellipse class="bulb-glass" id="bulbGlass" cx="100" cy="100" rx="65" ry="80" fill="#1a1a2e" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
-              <path class="bulb-filament" d="M100 55 L95 75 L105 75 Z" fill="#f5c542" opacity="0.3"/>
-              <path class="bulb-filament" d="M90 85 C95 95, 105 95, 110 85" stroke="#f5c542" stroke-width="2" fill="none" opacity="0.3"/>
-              <rect x="82" y="175" width="36" height="8" rx="2" fill="#333"/>
-              <rect x="78" y="183" width="44" height="12" rx="3" fill="#2a2a2a"/>
-              <rect x="82" y="195" width="36" height="20" rx="4" fill="#222"/>
-              <rect x="86" y="215" width="28" height="12" rx="3" fill="#1a1a1a"/>
-              <rect x="90" y="227" width="20" height="8" rx="10" fill="#111"/>
-            </svg>
-          </div>
-
-          <div class="status">
-            <span class="status-dot" id="statusDot"></span>
-            <span class="status-text" id="statusText" aria-live="polite">Off</span>
-          </div>
-
-          <div class="toggle-wrapper">
-            <span class="toggle-label" id="toggleLabel">OFF</span>
-            <button class="toggle" id="lightToggle" type="button" aria-label="Living room light" aria-pressed="false"></button>
-          </div>
-
-          <div class="brightness-knob-wrap">
-            <div class="knob-container" id="homeKnob">
-              <svg viewBox="0 0 200 200">
-                <defs>
-                  <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#f5b342"/>
-                    <stop offset="100%" stop-color="#f5c542"/>
-                  </linearGradient>
-                </defs>
-                <circle class="knob-track" cx="100" cy="100" r="70"/>
-                <circle class="knob-fill" id="homeKnobFill" cx="100" cy="100" r="70"/>
-                <circle class="knob-handle" id="homeKnobHandle" cx="170" cy="100" r="8"/>
-                <circle class="knob-handle-inner" cx="170" cy="100" r="3"/>
-              </svg>
-              <div class="knob-label">
-                <div class="knob-value" id="homeKnobValue">0</div>
-                <div class="knob-unit">%</div>
-              </div>
-            </div>
-            <span class="knob-hint">Drag, scroll or use arrow keys to adjust brightness</span>
-          </div>
-
-          <div class="product-info">
-            <h1>Smart Light</h1>
-            <p class="desc">
-              This is the living-room light on the Nather controller: an LED dimmed by
-              PWM from an ESP32 on your Wi-Fi. Switch it or drag the dial, and every open
-              page updates within a fraction of a second.
-            </p>
-          </div>
-        </div>
-
-      </div>
+  <main id="main" class="wrap">
+    <section class="intro">
+      <h1>Control the lights in your home</h1>
+      <p class="lead">Switch each room on or off and set its brightness. Changes go straight to the Nather controller on your Wi-Fi.</p>
+      <div class="notice" id="connNotice" role="status" aria-live="polite" hidden></div>
     </section>
 
-    <section class="section">
-      <div class="container">
-
-        <div class="gallery">
-          <div class="gallery-header">
-            <h2>Product Gallery</h2>
-            <div class="gallery-nav">
-              <button class="gallery-btn" id="galleryPause" type="button" aria-label="Pause slideshow" aria-pressed="false">&#10074;&#10074;</button>
-              <button class="gallery-btn" id="galleryPrev" type="button" aria-label="Previous slide">&#8592;</button>
-              <button class="gallery-btn" id="galleryNext" type="button" aria-label="Next slide">&#8594;</button>
-            </div>
-          </div>
-          <div class="gallery-track-wrapper">
-            <div class="gallery-track" id="galleryTrack">
-              <div class="gallery-slide"><img src="img/smart-light-1.jpg" alt="Smart light view 1" width="1448" height="1086" loading="lazy" draggable="false" /></div>
-              <div class="gallery-slide"><img src="img/smart-light-2.jpg" alt="Smart light view 2" width="946" height="2048" loading="lazy" draggable="false" /></div>
-              <div class="gallery-slide"><img src="img/smart-light-3.jpg" alt="Smart light view 3" width="1448" height="1086" loading="lazy" draggable="false" /></div>
-            </div>
-          </div>
-          <div class="gallery-dots" id="galleryDots"></div>
-        </div>
-
+    <section aria-labelledby="roomsTitle">
+      <div class="section-head">
+        <h2 id="roomsTitle">Rooms</h2>
+        <button type="button" class="btn" id="allOffBtn">Turn All Off</button>
       </div>
+      <ul class="room-list" id="roomList"></ul>
     </section>
 
-    <section class="section" id="components">
-      <div class="container">
+    <section aria-labelledby="motionTitle" class="motion">
+      <h2 id="motionTitle">Motion lighting</h2>
+      <p class="muted">When the motion sensor sees someone and it is dark, the rooms you tick turn on at 70%. They turn off again after 5 minutes without movement.</p>
 
-        <h2 class="section-title">Components Used</h2>
-        <div class="components-grid">
+      <fieldset class="entry-rooms">
+        <legend>Turn on when someone arrives</legend>
+        <div class="check-grid" id="entryList"></div>
+      </fieldset>
 
-          <a href="component.html?id=pir" class="component-card">
-            <div class="comp-icon-wrap" aria-hidden="true">&#9898;</div>
-            <h3>PIR Motion Sensor</h3>
-            <p>Detects motion using passive infrared technology</p>
-            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
-          </a>
-
-          <a href="component.html?id=led" class="component-card">
-            <div class="comp-icon-wrap" aria-hidden="true">&#9728;</div>
-            <h3>LED Light</h3>
-            <p>Energy-efficient lighting with adjustable brightness</p>
-            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
-          </a>
-
-          <a href="component.html?id=esp32" class="component-card">
-            <div class="comp-icon-wrap" aria-hidden="true">&#9000;</div>
-            <h3>ESP32</h3>
-            <p>Wi-Fi and Bluetooth microcontroller for IoT control</p>
-            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
-          </a>
-
-          <a href="component.html?id=relay" class="component-card">
-            <div class="comp-icon-wrap" aria-hidden="true">&#8644;</div>
-            <h3>Relay Module</h3>
-            <p>Switches high-power devices safely via low signal</p>
-            <span class="comp-arrow" aria-hidden="true">&#8594;</span>
-          </a>
-
+      <dl class="sensors">
+        <div>
+          <dt>Motion sensor</dt>
+          <dd id="motionStatus" aria-live="polite">Waiting for movement</dd>
         </div>
-
-      </div>
+        <div>
+          <dt>Light sensor</dt>
+          <dd id="lightStatus">Not fitted</dd>
+        </div>
+      </dl>
+      <button type="button" class="btn" id="simMotionBtn" hidden>Simulate Motion</button>
     </section>
   </main>
 
-  <footer>
-    <div class="container">&copy; 2026 Nather.</div>
+  <footer class="site-footer">
+    <div class="wrap">Nather smart lighting. ESP32 controller, PIR motion sensor and relay module.</div>
   </footer>
 
   <script src="js/engine.js"></script>

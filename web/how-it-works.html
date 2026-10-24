@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
+  <title>How It Works | Nather</title>
+  <meta name="description" content="The parts inside the Nather smart-lighting system and how they work together." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to Content</a>
+
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a href="index.html" class="brand" translate="no">Nather</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="index.html">Lights</a>
+        <a href="how-it-works.html" aria-current="page">How It Works</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <section class="intro">
+      <h1>How it works</h1>
+      <p class="lead">A small board on your Wi-Fi controls the lights. You use this website to tell it what to do, and a motion sensor can do it for you.</p>
+    </section>
+
+    <figure class="hero-photo">
+      <img src="img/smart-light-1.jpg" alt="The Nather smart light prototype" width="1448" height="1086" fetchpriority="high" />
+    </figure>
+
+    <section aria-labelledby="flowTitle">
+      <h2 id="flowTitle">What happens when you walk in</h2>
+      <ol class="flow">
+        <li>
+          <h3>Sense</h3>
+          <p>The motion sensor notices you. The light sensor checks whether it is dark.</p>
+        </li>
+        <li>
+          <h3>Decide</h3>
+          <p>The ESP32 board switches on the rooms you picked under Motion lighting.</p>
+        </li>
+        <li>
+          <h3>Show</h3>
+          <p>Every phone or laptop with this website open updates at the same moment.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="partsTitle">
+      <h2 id="partsTitle">The parts</h2>
+      <ul class="parts">
+        <li class="part" id="esp32">
+          <img src="img/esp32-board.jpg" alt="ESP32 development board" width="378" height="280" loading="lazy" />
+          <div>
+            <h3>ESP32 board</h3>
+            <p>The brain. It joins your Wi-Fi, serves this website, and switches the lights. Find it at <span translate="no">nather.local</span> on your network.</p>
+          </div>
+        </li>
+        <li class="part" id="pir">
+          <img src="img/pir-sensor.jpg" alt="HC-SR501 PIR motion sensor" width="258" height="193" loading="lazy" />
+          <div>
+            <h3>Motion sensor (PIR)</h3>
+            <p>Detects body heat moving in front of it, up to about 7 metres away.</p>
+          </div>
+        </li>
+        <li class="part" id="led">
+          <img src="img/led-light.jpg" alt="LED light" width="1200" height="800" loading="lazy" />
+          <div>
+            <h3>Dimmable LED</h3>
+            <p>The living-room light. The board dims it smoothly from 0 to 100%.</p>
+          </div>
+        </li>
+        <li class="part" id="relay">
+          <img src="img/relay-module.jpg" alt="Two-channel relay module" width="550" height="550" loading="lazy" />
+          <div>
+            <h3>Relay module</h3>
+            <p>Two switches for the bedroom and kitchen lights. Relays are on or off, with no dimming.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="photosTitle">
+      <h2 id="photosTitle">The prototype</h2>
+      <div class="photos">
+        <figure>
+          <img src="img/smart-light-2.jpg" alt="Phone screen of the original app showing the light sensor reading, motion status, LED brightness and an automatic or manual mode switch" width="946" height="2048" loading="lazy" />
+          <figcaption>The first app from the graduation project, in Turkish.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/smart-light-3.jpg" alt="The model house with the light on" width="1448" height="1086" loading="lazy" />
+          <figcaption>The model house used to demonstrate the system.</figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">Nather smart lighting. ESP32 controller, PIR motion sensor and relay module.</div>
+  </footer>
+
+  <script src="js/engine.js"></script>
+  <script src="js/device.js"></script>
+</body>
+</html>

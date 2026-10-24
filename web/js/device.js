@@ -281,7 +281,7 @@
   }
 
   /* ════════════════════════════════════
-     CONNECTION BADGE + PANEL (navbar)
+     CONNECTION BADGE + PANEL (site header)
      ════════════════════════════════════ */
 
   function el(tag, cls, text) {
@@ -292,7 +292,7 @@
   }
 
   function signalLabel(rssi) {
-    if (rssi === null || rssi === undefined) return "—";
+    if (rssi === null || rssi === undefined) return "n/a";
     let q = "weak";
     if (rssi >= -55) q = "excellent";
     else if (rssi >= -67) q = "good";
@@ -301,7 +301,7 @@
   }
 
   function formatUptime(s) {
-    if (s === null || s === undefined) return "—";
+    if (s === null || s === undefined) return "n/a";
     const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
     if (d) return d + "d " + h + "h";
     if (h) return h + "h " + m + "m";
@@ -312,7 +312,7 @@
   let panel = null;
 
   function renderBadge() {
-    const nav = document.querySelector(".navbar .container");
+    const nav = document.querySelector(".site-header .header-row");
     if (!nav) return;
     if (!badge) {
       badge = el("button", "conn-badge");
@@ -321,8 +321,7 @@
       badge.setAttribute("aria-haspopup", "dialog");
       badge.setAttribute("aria-expanded", "false");
       badge.addEventListener("click", (e) => { e.stopPropagation(); togglePanel(); });
-      const menuBtn = nav.querySelector(".mobile-menu-btn");
-      nav.insertBefore(badge, menuBtn);
+      nav.appendChild(badge);
       document.addEventListener("click", (e) => {
         if (panel && !panel.contains(e.target)) closePanel();
       });
@@ -339,24 +338,25 @@
     const dot = el("span", "conn-dot");
     dot.setAttribute("aria-hidden", "true");
     badge.replaceChildren(dot, el("span", "conn-text", labels[link] || link));
-    badge.title = mode === "device" ? "Controller at " + (base || location.host) : "No controller found — simulated in the browser";
+    badge.title = mode === "device" ? "Controller at " + (base || location.host) : "No controller found, simulated in this browser";
+    badge.setAttribute("aria-label", (labels[link] || link) + ". Show connection details");
   }
 
   function row(list, label, value) {
     const r = el("div", "conn-row");
-    r.append(el("span", "conn-k", label), el("span", "conn-v", value === null || value === undefined ? "—" : String(value)));
+    r.append(el("span", "conn-k", label), el("span", "conn-v", value === null || value === undefined ? "n/a" : String(value)));
     list.appendChild(r);
   }
 
   function fillPanel() {
     const d = (state && state.device) || {};
     panel.replaceChildren();
-    const title = el("h3", "conn-title", mode === "device" ? "Controller" : "Demo mode");
+    const title = el("h3", "conn-title", mode === "device" ? "Controller" : "Demo Mode");
     panel.appendChild(title);
 
     if (mode === "device") {
       const list = el("div", "conn-list");
-      row(list, "Link", link === "online" ? "Live (Server-Sent Events)" : "Lost — retrying");
+      row(list, "Link", link === "online" ? "Live (Server-Sent Events)" : "Lost, retrying");
       row(list, "Address", base || location.origin);
       row(list, "Hostname", d.hostname);
       row(list, "IP", d.ip);
@@ -418,7 +418,7 @@
     panel.setAttribute("aria-label", "Controller connection");
     panel.addEventListener("click", (e) => e.stopPropagation());
     fillPanel();
-    document.querySelector(".navbar").appendChild(panel);
+    document.querySelector(".site-header").appendChild(panel);
     badge.setAttribute("aria-expanded", "true");
   }
 
@@ -439,6 +439,8 @@
     setEntryRooms,
     simulateMotion,
     connectTo,
-    useDemo
+    useDemo,
+    openPanel() { if (!panel) togglePanel(); },
+    get address() { return base || location.host; }
   };
 })();

@@ -117,7 +117,7 @@ test("serves the website and refuses path traversal", async (t) => {
   t.after(d.close);
   const res = await fetch(d.base + "/");
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /<title>Nather/);
+  assert.match(await res.text(), /<title>[^<]*Nather<\/title>/);
   assert.equal((await fetch(d.base + "/js/device.js")).status, 200);
   const evil = await fetch(d.base + "/..%2f..%2fpackage.json");
   assert.notEqual(evil.status, 200);

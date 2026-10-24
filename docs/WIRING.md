@@ -43,7 +43,7 @@ wired differently, change it there. The UI picks the new map up from
 
 ## Calibrating the light sensor
 
-1. Flash the firmware and open the control panel. The entry-lighting section shows `Ambient light NN %`.
+1. Flash the firmware and open `http://nather.local`. The *Motion lighting* section shows the light sensor reading in %.
 2. Note the reading in normal daylight and with the room lights off at dusk.
 3. Set `DARK_THRESHOLD` in `config.h` between the two, and reflash.
 

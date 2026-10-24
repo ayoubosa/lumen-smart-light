@@ -3,66 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07070e" />
-  <title>Nather — Component Details</title>
-  <meta name="description" content="Detailed information about Nather smart light components." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <title>Moved | Nather</title>
+  <meta http-equiv="refresh" content="0; url=how-it-works.html" />
+  <link rel="canonical" href="how-it-works.html" />
+  <script>
+    /* this page moved; keep the room or part the old link pointed at */
+    var id = new URLSearchParams(location.search).get("id");
+    location.replace("how-it-works.html" + (id && /^[a-z0-9]+$/.test(id) ? "#" + id : ""));
+  </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to Content</a>
-
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="logo" translate="no">Nath<span>er</span></a>
-      <ul class="nav-links" id="navLinks">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="control.html">Control Panel</a></li>
-        <li class="nav-dropdown">
-          <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-controls="roomsMenu">Rooms</button>
-          <div class="dropdown-menu" id="roomsMenu">
-            <a href="room.html?id=living">Living Room</a>
-            <a href="room.html?id=bedroom">Bedroom</a>
-            <a href="room.html?id=kitchen">Kitchen</a>
-            <a href="room.html?id=bathroom">Bathroom</a>
-            <a href="room.html?id=hallway">Hallway</a>
-            <a href="room.html?id=garage">Garage</a>
-          </div>
-        </li>      </ul>
-      <button class="mobile-menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">&#9776;</button>
-    </div>
-  </nav>
-
-  <main id="main">
-      <section class="comp-detail">
-      <div class="container">
-
-        <h1 class="sr-only">Components</h1>
-        <a href="index.html#components" class="back-btn">&#8592; Back to Components</a>
-
-        <div class="comp-carousel" id="compCarousel">
-          <div class="comp-carousel-track-wrapper">
-            <div class="comp-carousel-track" id="compCarouselTrack"></div>
-          </div>
-          <div class="comp-carousel-nav">
-            <button type="button" class="gallery-btn" id="compCarouselPrev" aria-label="Previous component">&#8592;</button>
-            <div class="gallery-dots" id="compCarouselDots"></div>
-            <button type="button" class="gallery-btn" id="compCarouselNext" aria-label="Next component">&#8594;</button>
-          </div>
-        </div>
-
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="container">&copy; 2026 Nather.</div>
-  </footer>
-
-  <script src="js/engine.js"></script>
-  <script src="js/device.js"></script>
-  <script src="js/script.js"></script>
+  <p>This page moved to <a href="how-it-works.html">How It Works</a>.</p>
 </body>
 </html>
