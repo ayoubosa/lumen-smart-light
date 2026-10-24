@@ -18,7 +18,17 @@
       <ul class="nav-links" id="navLinks">
         <li><a href="index.html">Home</a></li>
         <li><a href="control.html">Control Panel</a></li>
-      </ul>
+        <li class="nav-dropdown">
+          <a href="#">Rooms &#9662;</a>
+          <div class="dropdown-menu">
+            <a href="room.html?id=living">Living Room</a>
+            <a href="room.html?id=bedroom">Bedroom</a>
+            <a href="room.html?id=kitchen">Kitchen</a>
+            <a href="room.html?id=bathroom">Bathroom</a>
+            <a href="room.html?id=hallway">Hallway</a>
+            <a href="room.html?id=garage">Garage</a>
+          </div>
+        </li>      </ul>
       <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
     </div>
   </nav>
@@ -97,6 +107,8 @@
     <div class="container">&copy; 2026 Nather.</div>
   </footer>
 
+  <script src="js/engine.js"></script>
+  <script src="js/device.js"></script>
   <script src="js/script.js"></script>
 </body>
 </html>

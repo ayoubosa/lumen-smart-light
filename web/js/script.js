@@ -1,30 +1,33 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
   /* ─── MOBILE MENU ─── */
   const menuBtn = document.getElementById("menuBtn");
   const navLinks = document.getElementById("navLinks");
   if (menuBtn && navLinks) {
-    menuBtn.addEventListener("click", () => {
+    menuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
       navLinks.classList.toggle("open");
-      /* also handle dropdown in mobile */
-      const dd = navLinks.querySelector(".nav-dropdown");
-      if (dd && navLinks.classList.contains("open")) {
-        dd.addEventListener("click", (e) => {
-          if (window.innerWidth <= 768) {
-            e.preventDefault();
-            dd.classList.toggle("open");
-          }
-        });
-      }
     });
+    /* on mobile the "Rooms" item opens its submenu instead of navigating;
+       the room links inside it still navigate */
+    const dd = navLinks.querySelector(".nav-dropdown");
+    const ddToggle = dd && dd.querySelector(":scope > a");
+    if (ddToggle) {
+      ddToggle.addEventListener("click", (e) => {
+        if (window.innerWidth <= 768) {
+          e.preventDefault();
+          dd.classList.toggle("open");
+        }
+      });
+    }
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".navbar")) navLinks.classList.remove("open");
     });
   }
 
   /* ─── CONSTANTS ─── */
-  const STORAGE_KEY = "nather_rooms";
-  const ENTRY_KEY = "nather_entry_rooms";
+  const HOME_ROOM = "living";   // the home-page bulb is the living-room light (the PWM dimmer)
+  const ROOM_ORDER = ["living", "bedroom", "kitchen", "bathroom", "hallway", "garage"];
 
   const ROOM_ICONS = {
     living: "&#127968;",
@@ -42,6 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
     bathroom: "Bathroom",
     hallway: "Hallway",
     garage: "Garage"
+  };
+
+  const HW_LABELS = {
+    pwm: "PWM dimmer",
+    relay: "Relay (on/off)",
+    none: "Not wired"
   };
 
   const COMPONENTS = {
@@ -76,12 +85,12 @@ document.addEventListener("DOMContentLoaded", () => {
       icon: "&#9000;",
       badge: "Controller",
       image: "img/esp32-board.jpg",
-      description: "The ESP32 is a powerful, low-cost microcontroller with built-in Wi-Fi and Bluetooth. It serves as the brain of the Nather system, handling sensor input, relay control, and wireless communication. Dual-core processing, ample GPIO pins, and deep-sleep modes make it perfect for always-on IoT applications. It connects directly to your home network so you can control lights from anywhere.",
+      description: "The ESP32 is a powerful, low-cost microcontroller with built-in Wi-Fi and Bluetooth. It serves as the brain of the Nather system, handling sensor input, relay control, and wireless communication. It joins your home Wi-Fi, announces itself as nather.local over mDNS, serves this website, and exposes a small REST API with live Server-Sent Events, so every open page updates the moment a light changes.",
       specs: [
         { label: "Chip", value: "ESP32-WROOM-32" },
         { label: "CPU", value: "Dual-core 240 MHz" },
-        { label: "Connectivity", value: "Wi-Fi + Bluetooth" },
-        { label: "GPIO Pins", value: "25 available" }
+        { label: "Connectivity", value: "Wi-Fi 802.11 b/g/n" },
+        { label: "Protocols", value: "HTTP, SSE, mDNS" }
       ]
     },
     relay: {
@@ -100,7 +109,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ════════════════════════════════════
-     CIRCULAR KNOB COMPONENT (v2 — fixed sensitivity)
+     CIRCULAR KNOB COMPONENT
+     setValue(v, { silent: true }) moves the knob without calling onChange —
+     used when the controller pushes a new value, so it is not echoed back.
      ════════════════════════════════════ */
 
   function createKnob(el, opts) {
@@ -109,20 +120,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const innerDot = el.querySelector(".knob-handle-inner");
     const valueEl = el.querySelector(".knob-value");
     const svg = el.querySelector("svg");
-    let value = opts.initialValue || 0;
+    let value = null;
     let dragging = false;
     const onChange = opts.onChange || function(){};
 
-    const ARC_LENGTH = 329.87;
-    const GAP_LENGTH = 109.96;
+    /* 270° dial with the gap at the bottom: 0 % at 7 o'clock, 100 % at 5 o'clock
+       (SVG angles, y grows downwards, so 135° is lower-left) */
+    const START_DEG = 135;
+    const SWEEP_DEG = 270;
     const cx = 100, cy = 100, r = 70;
+    const CIRCUMFERENCE = 2 * Math.PI * r;
+    const ARC_LENGTH = CIRCUMFERENCE * SWEEP_DEG / 360;
 
-    function valueToOffset(v) {
-      return ARC_LENGTH * (1 - v / 100);
+    el.setAttribute("role", "slider");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-valuemin", "0");
+    el.setAttribute("aria-valuemax", "100");
+    if (opts.label) el.setAttribute("aria-label", opts.label);
+
+    function valueToDash(v) {
+      return (ARC_LENGTH * v / 100) + " " + CIRCUMFERENCE;
     }
 
     function valueToHandlePos(v) {
-      const angleDeg = -135 + (270 * v / 100);
+      const angleDeg = START_DEG + (SWEEP_DEG * v / 100);
       const angleRad = angleDeg * Math.PI / 180;
       return {
         x: cx + r * Math.cos(angleRad),
@@ -130,14 +151,10 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    function setValue(v, isDragging) {
-      v = Math.round(Math.max(0, Math.min(100, v)));
-      if (v === value && !isDragging) return;
-      value = v;
-      const offset = valueToOffset(v);
+    function render(v, isDragging) {
       const pos = valueToHandlePos(v);
       if (fill) {
-        fill.setAttribute("stroke-dashoffset", offset);
+        fill.style.strokeDasharray = valueToDash(v);
         fill.classList.toggle("dragging", isDragging);
       }
       if (handle) {
@@ -152,7 +169,19 @@ document.addEventListener("DOMContentLoaded", () => {
         innerDot.classList.toggle("active", isDragging);
       }
       if (valueEl) valueEl.textContent = v;
-      onChange(v, isDragging);
+      el.setAttribute("aria-valuenow", v);
+      el.setAttribute("aria-valuetext", v + "% brightness");
+    }
+
+    function setValue(v, isDragging, silent) {
+      v = Math.round(Math.max(0, Math.min(100, v)));
+      if (v === value && !isDragging) {
+        render(v, false);
+        return;
+      }
+      value = v;
+      render(v, isDragging);
+      if (!silent) onChange(v, isDragging);
     }
 
     function angleToValue(clientX, clientY) {
@@ -161,15 +190,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const centerY = rect.top + rect.height / 2;
       const dx = clientX - centerX;
       const dy = clientY - centerY;
-      let deg = Math.atan2(dy, dx) * 180 / Math.PI;
-      deg = ((deg % 360) + 360) % 360;
+      const deg = Math.atan2(dy, dx) * 180 / Math.PI;
+      const rel = (((deg - START_DEG) % 360) + 360) % 360;   // degrees past the 0 % end
       let v;
-      if (deg >= 225) {
-        v = ((deg - 225) / 270) * 100;
-      } else if (deg <= 135) {
-        v = ((deg + 135) / 270) * 100;
+      if (rel <= SWEEP_DEG) {
+        v = (rel / SWEEP_DEG) * 100;
       } else {
-        v = deg < 180 ? 100 : 0;
+        v = rel < SWEEP_DEG + (360 - SWEEP_DEG) / 2 ? 100 : 0;  // in the gap: snap to the nearer end
       }
       return Math.round(Math.max(0, Math.min(100, v)));
     }
@@ -206,9 +233,23 @@ document.addEventListener("DOMContentLoaded", () => {
       setValue(value + delta, false);
     }, { passive: false });
 
-    setValue(value, false);
+    el.addEventListener("keydown", (e) => {
+      const steps = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5, PageUp: 10, PageDown: -10 };
+      if (e.key in steps) setValue(value + steps[e.key], false);
+      else if (e.key === "Home") setValue(0, false);
+      else if (e.key === "End") setValue(100, false);
+      else return;
+      e.preventDefault();
+      e.stopPropagation();   // keep arrow keys from also switching rooms / slides
+    });
 
-    return { setValue: (v) => setValue(v, false), getValue: () => value };
+    setValue(opts.initialValue || 0, false, true);
+
+    return {
+      setValue: (v, o) => setValue(v, false, o && o.silent),
+      getValue: () => value,
+      isDragging: () => dragging
+    };
   }
 
   /* ─── BULB RENDER HELPER ─── */
@@ -227,9 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (glowEl) {
       glowEl.classList.toggle("on", isOn && brightness > 0);
-      if (isOn && brightness > 0) {
-        glowEl.style.opacity = 0.2 + (brightness / 100) * 0.6;
-      }
+      glowEl.style.opacity = isOn && brightness > 0 ? 0.2 + (brightness / 100) * 0.6 : "";
     }
   }
 
@@ -240,80 +279,6 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapperEl.classList.remove("pulse");
     void wrapperEl.offsetWidth;
     wrapperEl.classList.add("pulse");
-  }
-
-  /* ════════════════════════════════════
-     HOME PAGE — BULB TOGGLE + KNOB
-     ════════════════════════════════════ */
-  const toggle = document.getElementById("lightToggle");
-  if (toggle) {
-    const bulbGlass = document.getElementById("bulbGlass");
-    const glow = document.getElementById("bulbGlow");
-    const statusDot = document.getElementById("statusDot");
-    const statusText = document.getElementById("statusText");
-    const toggleLabel = document.getElementById("toggleLabel");
-    const filaments = document.querySelectorAll(".bulb-filament");
-    const bulbWrapper = document.querySelector(".bulb-wrapper");
-
-    let isOn = toggle.dataset.state === "on";
-    let bulbBrightness = parseInt(localStorage.getItem("nather_brightness")) || 0;
-
-    function setLight(state, brightness) {
-      isOn = state;
-      if (brightness !== undefined) bulbBrightness = brightness;
-      toggle.classList.toggle("on", isOn);
-      renderBulb(bulbGlass, glow, isOn, bulbBrightness);
-      if (statusDot) statusDot.classList.toggle("on", isOn);
-      document.body.classList.toggle("lit", isOn);
-      filaments.forEach(f => { f.style.opacity = isOn ? "1" : "0.3"; });
-      if (statusText) statusText.textContent = isOn ? "On" : "Off";
-      if (toggleLabel) toggleLabel.textContent = isOn ? "ON" : "OFF";
-      toggle.dataset.state = isOn ? "on" : "off";
-      if (isOn) pulseBulb(bulbWrapper);
-    }
-
-    const homeKnobEl = document.getElementById("homeKnob");
-    let homeKnob = null;
-
-    toggle.addEventListener("click", () => {
-      const newState = !isOn;
-      if (!newState) {
-        setLight(false, 0);
-        if (homeKnob) homeKnob.setValue(0);
-      } else {
-        const b = bulbBrightness || 50;
-        setLight(true, b);
-        if (homeKnob) homeKnob.setValue(b);
-      }
-      localStorage.setItem("nather_bulb", newState ? "on" : "off");
-    });
-
-    if (homeKnobEl) {
-      const savedBrightness = parseInt(localStorage.getItem("nather_brightness")) || 0;
-      homeKnob = createKnob(homeKnobEl, {
-        initialValue: savedBrightness,
-        onChange: (v, dragging) => {
-          bulbBrightness = v;
-          localStorage.setItem("nather_brightness", v);
-          if (v > 0) {
-            setLight(true, v);
-            toggle.dataset.state = "on";
-            localStorage.setItem("nather_bulb", "on");
-          } else {
-            setLight(false, 0);
-            localStorage.setItem("nather_bulb", "off");
-          }
-          if (!dragging) pulseBulb(bulbWrapper);
-        }
-      });
-      if (savedBrightness > 0) {
-        setLight(true, savedBrightness);
-        pulseBulb(bulbWrapper);
-      }
-    }
-
-    const saved = localStorage.getItem("nather_bulb");
-    if (saved === "on" && (!homeKnobEl || !homeKnob)) setLight(true);
   }
 
   /* ════════════════════════════════════
@@ -359,13 +324,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let autoplay = setInterval(next, 5000);
     track.addEventListener("mouseenter", () => clearInterval(autoplay));
-    track.addEventListener("mouseleave", () => { autoplay = setInterval(next, 5000); });
+    track.addEventListener("mouseleave", () => { clearInterval(autoplay); autoplay = setInterval(next, 5000); });
 
     /* ─── GALLERY SWIPE ─── */
     const galleryWrap = track.parentElement;
     let gStartX = 0, gDeltaX = 0, gSwiping = false;
 
     function gSwipeStart(e) {
+      if (!e.touches) e.preventDefault();   // stop the browser's native image drag
       gStartX = e.touches ? e.touches[0].clientX : e.clientX;
       gDeltaX = 0;
       gSwiping = true;
@@ -402,495 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ════════════════════════════════════
-     CONTROL PAGE — ROOM MANAGEMENT
-     ════════════════════════════════════ */
-  const roomGrid = document.getElementById("roomGrid");
-  const roomDetail = document.getElementById("roomDetail");
-  const closeDetail = document.getElementById("closeDetail");
-  const detailToggleEl = document.getElementById("detailToggle");
-
-  let activeRoom = null;
-
-  function loadRooms() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultRooms();
-    } catch { return defaultRooms(); }
-  }
-
-  function defaultRooms() {
-    return {
-      living: { on: false, brightness: 0 },
-      bedroom: { on: false, brightness: 0 },
-      kitchen: { on: false, brightness: 0 },
-      bathroom: { on: false, brightness: 0 },
-      hallway: { on: false, brightness: 0 },
-      garage: { on: false, brightness: 0 }
-    };
-  }
-
-  function saveRooms(rooms) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
-  }
-
-  function updateRoomUI(rooms) {
-    for (const [id, state] of Object.entries(rooms)) {
-      const dot = document.getElementById("dot-" + id);
-      const status = document.getElementById("status-" + id);
-      const glow = document.getElementById("glow-" + id);
-      const brightness = document.getElementById("brightness-" + id);
-      const card = document.querySelector(`.room-card[data-room="${id}"]`);
-      if (dot) dot.classList.toggle("on", state.on);
-      if (status) status.textContent = state.on ? "On" : "Off";
-      if (glow) glow.classList.toggle("on", state.on);
-      if (brightness) brightness.textContent = "Brightness: " + (state.on ? state.brightness : 0) + "%";
-      if (card) card.style.borderColor = state.on ? "rgba(245,197,66,0.3)" : "";
-    }
-  }
-
-  let rooms = loadRooms();
-
-  if (roomGrid) {
-    updateRoomUI(rooms);
-    roomGrid.addEventListener("click", (e) => {
-      const card = e.target.closest(".room-card");
-      if (!card) return;
-      if (e.target.closest("a")) return;
-      const room = card.dataset.room;
-      openRoomDetail(room);
-    });
-  }
-
-  const detailKnobEl = document.getElementById("detailKnob");
-  let detailKnob = null;
-  if (detailKnobEl) {
-    detailKnob = createKnob(detailKnobEl, {
-      initialValue: 0,
-      onChange: (v) => {
-        if (!activeRoom) return;
-        const state = rooms[activeRoom];
-        state.brightness = v;
-        state.on = v > 0;
-        if (detailToggleEl) detailToggleEl.classList.toggle("on", state.on);
-        saveRooms(rooms);
-        updateRoomUI(rooms);
-        if (state.on && typeof autoUpdatePIR === "function") autoUpdatePIR();
-      }
-    });
-  }
-
-  function openRoomDetail(room) {
-    activeRoom = room;
-    const state = rooms[room];
-    if (!state) return;
-    document.querySelectorAll(".room-card").forEach(c => c.classList.remove("active-room"));
-    const activeCard = document.querySelector(`.room-card[data-room="${room}"]`);
-    if (activeCard) activeCard.classList.add("active-room");
-    const detailIcon = document.getElementById("detailIcon");
-    const detailName = document.getElementById("detailName");
-    if (detailIcon) detailIcon.innerHTML = ROOM_ICONS[room] || "&#127968;";
-    if (detailName) detailName.textContent = ROOM_NAMES[room] || room;
-    if (detailToggleEl) detailToggleEl.classList.toggle("on", state.on);
-    if (detailKnob) detailKnob.setValue(state.on ? state.brightness : 0);
-    if (roomDetail) {
-      roomDetail.classList.add("visible");
-      roomDetail.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }
-
-  if (closeDetail) {
-    closeDetail.addEventListener("click", () => {
-      roomDetail.classList.remove("visible");
-      document.querySelectorAll(".room-card").forEach(c => c.classList.remove("active-room"));
-      activeRoom = null;
-    });
-  }
-
-  if (detailToggleEl) {
-    detailToggleEl.addEventListener("click", () => {
-      if (!activeRoom) return;
-      const state = rooms[activeRoom];
-      state.on = !state.on;
-      state.brightness = state.on ? Math.max(state.brightness, 10) : 0;
-      if (detailKnob) detailKnob.setValue(state.brightness);
-      detailToggleEl.classList.toggle("on", state.on);
-      saveRooms(rooms);
-      updateRoomUI(rooms);
-    });
-  }
-
-  /* ════════════════════════════════════
-     ENTRY LIGHTING
-     ════════════════════════════════════ */
-  const autoGrid = document.getElementById("autoLightGrid");
-  const autoStatusDot = document.getElementById("autoStatusDot");
-  const autoStatusText = document.getElementById("autoStatusText");
-
-  /* FUTURE: Replace localStorage calls below with an API call.
-     Example:
-       fetch("/api/entry-rooms", { method: "PUT", body: JSON.stringify(selected) })
-     Swap localStorage.getItem / setItem in these two functions — everything
-     else stays the same. */
-  function loadEntryRooms() {
-    try {
-      return JSON.parse(localStorage.getItem(ENTRY_KEY)) || [];
-    } catch { return []; }
-  }
-
-  /* FUTURE API CALL SITE: Replace localStorage.setItem with fetch PUT above. */
-  function saveEntryRooms(selected) {
-    localStorage.setItem(ENTRY_KEY, JSON.stringify(selected));
-  }
-
-  let entryRooms = loadEntryRooms();
-
-  function renderEntryRooms() {
-    if (!autoGrid) return;
-    autoGrid.querySelectorAll(".auto-room-card").forEach(card => {
-      card.classList.toggle("selected", entryRooms.includes(card.dataset.autoRoom));
-    });
-  }
-
-  function autoUpdatePIR() {
-    const anyOn = Object.values(rooms).some(r => r.on);
-    if (!autoStatusDot || !autoStatusText) return;
-    if (anyOn) {
-      autoStatusDot.classList.add("active");
-      autoStatusText.textContent = "Motion detected — lights active";
-    } else {
-      const turnedOn = entryRooms.some(room => {
-        if (rooms[room] && !rooms[room].on) {
-          rooms[room].on = true;
-          rooms[room].brightness = 70;
-          return true;
-        }
-        return false;
-      });
-      if (turnedOn) {
-        saveRooms(rooms);
-        updateRoomUI(rooms);
-        autoStatusDot.classList.add("active");
-        autoStatusText.textContent = "Motion detected — auto lights activated";
-      } else {
-        autoStatusDot.classList.remove("active");
-        autoStatusText.textContent = "Waiting for motion...";
-      }
-    }
-  }
-
-  if (autoGrid) {
-    renderEntryRooms();
-    autoGrid.addEventListener("click", (e) => {
-      const card = e.target.closest(".auto-room-card");
-      if (!card) return;
-      const room = card.dataset.autoRoom;
-      const idx = entryRooms.indexOf(room);
-      if (idx >= 0) entryRooms.splice(idx, 1);
-      else entryRooms.push(room);
-      saveEntryRooms(entryRooms);
-      renderEntryRooms();
-    });
-    if (entryRooms.length > 0) {
-      autoUpdatePIR();
-      setInterval(autoUpdatePIR, 8000);
-    }
-  }
-
-  /* ════════════════════════════════════
-     ACCORDION TOGGLE
-     ════════════════════════════════════ */
-  const accordionToggles = document.querySelectorAll(".accordion-header");
-  accordionToggles.forEach(header => {
-    header.addEventListener("click", () => {
-      const body = header.nextElementSibling;
-      const arrow = header.querySelector(".accordion-arrow");
-      if (body && body.classList.contains("accordion-body")) {
-        body.classList.toggle("open");
-        if (arrow) arrow.classList.toggle("open");
-      }
-    });
-  });
-
-  /* ════════════════════════════════════
-     ROOM PAGE (room.html?id=xxx) — swipe, arrows, keyboard
-     ════════════════════════════════════ */
-  const roomPanel = document.getElementById("roomPanel");
-  if (roomPanel) {
-    const ROOM_ORDER = ["living", "bedroom", "kitchen", "bathroom", "hallway", "garage"];
-
-    const params = new URLSearchParams(window.location.search);
-    let currentRoomId = params.get("id") || "living";
-
-    const iconEl = document.getElementById("rpIcon");
-    const nameEl = document.getElementById("rpName");
-    const subEl = document.getElementById("rpSub");
-    const bulbWrapper = document.getElementById("rpBulbWrapper");
-    const bulbGlass = document.getElementById("rpBulbGlass");
-    const bulbGlow = document.getElementById("rpBulbGlow");
-    const statusDot = document.getElementById("rpStatusDot");
-    const statusText = document.getElementById("rpStatusText");
-    const toggleBtn = document.getElementById("rpToggle");
-    const toggleLabel = document.getElementById("rpToggleLabel");
-    const filaments = document.querySelectorAll("#rpBulbWrapper .bulb-filament");
-    const knobEl = document.getElementById("rpKnob");
-    const rpPrevBtn = document.getElementById("rpPrevBtn");
-    const rpNextBtn = document.getElementById("rpNextBtn");
-    const rpCounter = document.getElementById("rpCounter");
-
-    let rpIsOn = false;
-    let rpBrightness = 0;
-
-    function loadRoomState(id) {
-      const s = rooms[id] || { on: false, brightness: 0 };
-      rpIsOn = s.on;
-      rpBrightness = s.brightness;
-    }
-
-    function saveCurrentRoom() {
-      rooms[currentRoomId] = { on: rpIsOn, brightness: rpBrightness };
-      saveRooms(rooms);
-    }
-
-    function setRoomLabels(id) {
-      if (iconEl) iconEl.innerHTML = ROOM_ICONS[id] || "&#127968;";
-      if (nameEl) nameEl.textContent = ROOM_NAMES[id] || id;
-      if (subEl) subEl.textContent = "Adjust your " + (ROOM_NAMES[id] || id) + " light";
-      document.title = "Nather — " + (ROOM_NAMES[id] || id);
-    }
-
-    function syncUI() {
-      if (toggleBtn) toggleBtn.classList.toggle("on", rpIsOn);
-      renderBulb(bulbGlass, bulbGlow, rpIsOn, rpBrightness);
-      if (statusDot) statusDot.classList.toggle("on", rpIsOn);
-      filaments.forEach(f => { f.style.opacity = rpIsOn ? "1" : "0.3"; });
-      if (statusText) statusText.textContent = rpIsOn ? "On" : "Off";
-      if (toggleLabel) toggleLabel.textContent = rpIsOn ? "ON" : "OFF";
-      if (rpKnob) rpKnob.setValue(rpBrightness);
-    }
-
-    function updateRoomCounter() {
-      const idx = ROOM_ORDER.indexOf(currentRoomId);
-      if (rpCounter) rpCounter.textContent = (idx + 1) + " / " + ROOM_ORDER.length;
-      if (rpPrevBtn) rpPrevBtn.disabled = idx === 0;
-      if (rpNextBtn) rpNextBtn.disabled = idx === ROOM_ORDER.length - 1;
-    }
-
-    function switchToRoom(id) {
-      if (id === currentRoomId) return;
-      saveCurrentRoom();
-      currentRoomId = id;
-      loadRoomState(id);
-      setRoomLabels(id);
-      syncUI();
-      history.replaceState(null, "", "?id=" + id);
-      updateRoomCounter();
-      if (rpIsOn) pulseBulb(bulbWrapper);
-    }
-
-    loadRoomState(currentRoomId);
-    setRoomLabels(currentRoomId);
-    updateRoomCounter();
-
-    let rpKnob = null;
-    if (knobEl) {
-      rpKnob = createKnob(knobEl, {
-        initialValue: rpBrightness,
-        onChange: (v, dragging) => {
-          rpBrightness = v;
-          rpIsOn = v > 0;
-          syncUI();
-          saveCurrentRoom();
-          if (rpIsOn && !dragging) pulseBulb(bulbWrapper);
-        }
-      });
-    }
-
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", () => {
-        if (rpIsOn) {
-          rpIsOn = false;
-          rpBrightness = 0;
-          if (rpKnob) rpKnob.setValue(0);
-          syncUI();
-          saveCurrentRoom();
-        } else {
-          rpIsOn = true;
-          rpBrightness = rpBrightness || 50;
-          if (rpKnob) rpKnob.setValue(rpBrightness);
-          syncUI();
-          saveCurrentRoom();
-          pulseBulb(bulbWrapper);
-        }
-      });
-    }
-
-    if (rpIsOn) {
-      syncUI();
-      pulseBulb(bulbWrapper);
-    }
-
-    /* ─── ROOM TRANSITION ENGINE ─── */
-
-    let rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
-
-    /* Slides the panel in from the correct side after content has been swapped.
-       Called after the slide-out animation finishes (from either touch or buttons). */
-    function slideInRoom(dir, targetId) {
-      rSwipe.animating = true;
-      roomPanel.style.pointerEvents = "none";
-
-      const slideDir = dir === "next" ? "left" : "right";
-      const inT = 300;
-
-      switchToRoom(targetId);
-
-      roomPanel.style.transition = "none";
-      roomPanel.style.transform = "translateX(" + (slideDir === "left" ? "" : "-") + "100%)";
-      roomPanel.style.opacity = "0";
-      void roomPanel.offsetWidth;
-
-      roomPanel.style.transition = "transform " + inT + "ms cubic-bezier(0.22,1,0.36,1), opacity " + inT + "ms ease";
-      roomPanel.style.transform = "translateX(0)";
-      roomPanel.style.opacity = "1";
-
-      setTimeout(() => {
-        roomPanel.style.transition = "";
-        roomPanel.style.pointerEvents = "";
-        rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
-      }, inT + 30);
-    }
-
-    /* Full transition for buttons / keyboard: slide out, then slide in. */
-    function transitionRoom(dir, targetId) {
-      if (rSwipe.animating) return;
-      rSwipe.animating = true;
-      roomPanel.style.pointerEvents = "none";
-
-      const slideDir = dir === "next" ? "left" : "right";
-      const outT = 220;
-
-      roomPanel.style.transition = "transform " + outT + "ms cubic-bezier(0.22,1,0.36,1), opacity " + outT + "ms ease";
-      roomPanel.style.transform = "translateX(" + (slideDir === "left" ? "-" : "") + "100%)";
-      roomPanel.style.opacity = "0";
-
-      setTimeout(() => {
-        rSwipe.animating = false;
-        slideInRoom(dir, targetId);
-      }, outT);
-    }
-
-    /* ─── TOUCH SWIPE — finger follows ─── */
-
-    document.addEventListener("touchstart", (e) => {
-      if (rSwipe.animating) return;
-      if (e.target.closest(".knob-container") || e.target.closest(".toggle") ||
-          e.target.closest(".navbar") || e.target.closest("a") ||
-          e.target.closest(".rp-nav-btn")) return;
-      rSwipe.startX = e.touches[0].clientX;
-      rSwipe.deltaX = 0;
-      rSwipe.swiping = false;
-    }, { passive: true });
-
-    document.addEventListener("touchmove", (e) => {
-      if (rSwipe.animating) return;
-      if (!rSwipe.startX) return;
-
-      const dx = e.touches[0].clientX - rSwipe.startX;
-
-      if (!rSwipe.swiping && Math.abs(dx) > 12) {
-        rSwipe.swiping = true;
-      }
-      if (!rSwipe.swiping) return;
-      e.preventDefault();
-
-      const idx = ROOM_ORDER.indexOf(currentRoomId);
-      let bounded = dx;
-      if (idx === 0 && dx > 0) bounded = dx * 0.2;
-      if (idx === ROOM_ORDER.length - 1 && dx < 0) bounded = dx * 0.2;
-
-      rSwipe.deltaX = bounded;
-      roomPanel.style.transition = "none";
-      roomPanel.style.transform = "translateX(" + bounded + "px)";
-      roomPanel.style.opacity = Math.max(0.5, 1 - Math.abs(bounded) / 500);
-    }, { passive: false });
-
-    document.addEventListener("touchend", (e) => {
-      if (rSwipe.animating) return;
-      if (!rSwipe.swiping) {
-        rSwipe.startX = 0;
-        roomPanel.style.transition = "";
-        roomPanel.style.transform = "";
-        roomPanel.style.opacity = "";
-        return;
-      }
-
-      const dx = rSwipe.deltaX;
-      const idx = ROOM_ORDER.indexOf(currentRoomId);
-      const threshold = 80;
-
-      if (dx < -threshold && idx < ROOM_ORDER.length - 1) {
-        rSwipe.animating = true;
-        roomPanel.style.pointerEvents = "none";
-        roomPanel.style.transition = "transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease";
-        roomPanel.style.transform = "translateX(-100%)";
-        roomPanel.style.opacity = "0";
-        setTimeout(() => {
-          rSwipe.animating = false;
-          slideInRoom("next", ROOM_ORDER[idx + 1]);
-        }, 220);
-      } else if (dx > threshold && idx > 0) {
-        rSwipe.animating = true;
-        roomPanel.style.pointerEvents = "none";
-        roomPanel.style.transition = "transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease";
-        roomPanel.style.transform = "translateX(100%)";
-        roomPanel.style.opacity = "0";
-        setTimeout(() => {
-          rSwipe.animating = false;
-          slideInRoom("prev", ROOM_ORDER[idx - 1]);
-        }, 220);
-      } else {
-        roomPanel.style.transition = "transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease";
-        roomPanel.style.transform = "translateX(0)";
-        roomPanel.style.opacity = "1";
-        setTimeout(() => {
-          roomPanel.style.transition = "";
-          rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
-        }, 380);
-      }
-    });
-
-    /* ─── ARROW BUTTONS ─── */
-
-    if (rpPrevBtn) {
-      rpPrevBtn.addEventListener("click", () => {
-        const idx = ROOM_ORDER.indexOf(currentRoomId);
-        if (idx > 0) transitionRoom("prev", ROOM_ORDER[idx - 1]);
-      });
-    }
-
-    if (rpNextBtn) {
-      rpNextBtn.addEventListener("click", () => {
-        const idx = ROOM_ORDER.indexOf(currentRoomId);
-        if (idx < ROOM_ORDER.length - 1) transitionRoom("next", ROOM_ORDER[idx + 1]);
-      });
-    }
-
-    /* ─── KEYBOARD ARROW KEYS ─── */
-
-    document.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
-      const idx = ROOM_ORDER.indexOf(currentRoomId);
-      if (e.key === "ArrowLeft" && idx > 0) {
-        e.preventDefault();
-        transitionRoom("prev", ROOM_ORDER[idx - 1]);
-      }
-      if (e.key === "ArrowRight" && idx < ROOM_ORDER.length - 1) {
-        e.preventDefault();
-        transitionRoom("next", ROOM_ORDER[idx + 1]);
-      }
-    });
-  }
-
-  /* ════════════════════════════════════
      COMPONENT PAGE — carousel
      ════════════════════════════════════ */
   const compTrack = document.getElementById("compCarouselTrack");
@@ -924,6 +401,7 @@ document.addEventListener("DOMContentLoaded", () => {
       img.src = c.image;
       img.alt = c.name;
       img.loading = "lazy";
+      img.draggable = false;
 
       img.onload = () => { placeholder.style.display = "none"; };
       img.onerror = () => { img.style.display = "none"; };
@@ -1037,7 +515,6 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ─── Keyboard ─── */
 
     document.addEventListener("keydown", (e) => {
-      if (!compTrack) return;
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
       if (e.key === "ArrowLeft") { e.preventDefault(); compGoPrev(); }
       if (e.key === "ArrowRight") { e.preventDefault(); compGoNext(); }
@@ -1045,6 +522,507 @@ document.addEventListener("DOMContentLoaded", () => {
 
     compRenderDots();
     compGoTo(compCurrent);
+  }
+
+  /* ════════════════════════════════════
+     ACCORDION TOGGLE
+     ════════════════════════════════════ */
+  const accordionToggles = document.querySelectorAll(".accordion-header");
+  accordionToggles.forEach(header => {
+    header.addEventListener("click", () => {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector(".accordion-arrow");
+      if (body && body.classList.contains("accordion-body")) {
+        const open = body.classList.toggle("open");
+        if (arrow) arrow.classList.toggle("open", open);
+        header.setAttribute("aria-expanded", open);
+      }
+    });
+    header.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); header.click(); }
+    });
+  });
+
+  /* ════════════════════════════════════
+     EVERYTHING BELOW READS AND WRITES LIGHT STATE
+     through the device link (js/device.js): the ESP32 when one is
+     reachable, otherwise the in-browser demo controller.
+     ════════════════════════════════════ */
+  const device = window.NatherDevice;
+  if (!device) return;
+  await device.ready;
+
+  const rooms = () => device.state.rooms;
+
+  /* ════════════════════════════════════
+     HOME PAGE — BULB TOGGLE + KNOB
+     ════════════════════════════════════ */
+  const toggle = document.getElementById("lightToggle");
+  if (toggle) {
+    const bulbGlass = document.getElementById("bulbGlass");
+    const glow = document.getElementById("bulbGlow");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const toggleLabel = document.getElementById("toggleLabel");
+    const filaments = document.querySelectorAll(".bulb-filament");
+    const bulbWrapper = document.querySelector(".bulb-wrapper");
+    const homeKnobEl = document.getElementById("homeKnob");
+    let wasOn = null;
+
+    function setLight(isOn, brightness) {
+      toggle.classList.toggle("on", isOn);
+      toggle.setAttribute("aria-pressed", isOn);
+      renderBulb(bulbGlass, glow, isOn, brightness);
+      if (statusDot) statusDot.classList.toggle("on", isOn);
+      document.body.classList.toggle("lit", isOn);
+      filaments.forEach(f => { f.style.opacity = isOn ? "1" : "0.3"; });
+      if (statusText) statusText.textContent = isOn ? "On" : "Off";
+      if (toggleLabel) toggleLabel.textContent = isOn ? "ON" : "OFF";
+      if (isOn && wasOn === false) pulseBulb(bulbWrapper);
+      wasOn = isOn;
+    }
+
+    const homeKnob = homeKnobEl ? createKnob(homeKnobEl, {
+      label: "Living room brightness",
+      initialValue: rooms()[HOME_ROOM].brightness,
+      onChange: (v) => device.setRoom(HOME_ROOM, { brightness: v })
+    }) : null;
+
+    toggle.addEventListener("click", () => {
+      device.setRoom(HOME_ROOM, { on: !rooms()[HOME_ROOM].on });
+    });
+
+    function renderHome() {
+      const r = rooms()[HOME_ROOM];
+      setLight(r.on, r.brightness);
+      if (homeKnob && !homeKnob.isDragging()) homeKnob.setValue(r.brightness, { silent: true });
+    }
+
+    device.onChange(renderHome);
+    renderHome();
+  }
+
+  /* ════════════════════════════════════
+     CONTROL PAGE — ROOM MANAGEMENT
+     ════════════════════════════════════ */
+  const roomGrid = document.getElementById("roomGrid");
+  const roomDetail = document.getElementById("roomDetail");
+  const closeDetail = document.getElementById("closeDetail");
+  const detailToggleEl = document.getElementById("detailToggle");
+
+  let activeRoom = null;
+
+  function hwLabel(state) {
+    const label = HW_LABELS[state.hw] || state.hw;
+    return state.pin !== undefined && state.pin >= 0 ? label + " · GPIO " + state.pin : label;
+  }
+
+  function updateRoomUI() {
+    for (const [id, state] of Object.entries(rooms())) {
+      const dot = document.getElementById("dot-" + id);
+      const status = document.getElementById("status-" + id);
+      const glow = document.getElementById("glow-" + id);
+      const brightness = document.getElementById("brightness-" + id);
+      const card = document.querySelector(`.room-card[data-room="${id}"]`);
+      if (dot) dot.classList.toggle("on", state.on);
+      if (status) status.textContent = state.on ? (state.auto ? "On (motion)" : "On") : "Off";
+      if (glow) glow.classList.toggle("on", state.on);
+      if (brightness) brightness.textContent = "Brightness: " + (state.on ? state.brightness : 0) + "%";
+      if (card) {
+        card.style.borderColor = state.on ? "rgba(245,197,66,0.3)" : "";
+        let hw = card.querySelector(".room-hw");
+        if (!hw) {
+          hw = document.createElement("span");
+          hw.className = "room-hw";
+          card.insertBefore(hw, card.querySelector(".room-page-link"));
+        }
+        hw.textContent = hwLabel(state);
+        hw.dataset.hw = state.hw;
+      }
+    }
+  }
+
+  const detailKnobEl = document.getElementById("detailKnob");
+  const detailKnob = detailKnobEl ? createKnob(detailKnobEl, {
+    label: "Room brightness",
+    initialValue: 0,
+    onChange: (v) => { if (activeRoom) device.setRoom(activeRoom, { brightness: v }); }
+  }) : null;
+
+  function syncDetail() {
+    if (!activeRoom) return;
+    const state = rooms()[activeRoom];
+    if (detailToggleEl) {
+      detailToggleEl.classList.toggle("on", state.on);
+      detailToggleEl.setAttribute("aria-pressed", state.on);
+    }
+    if (detailKnob && !detailKnob.isDragging()) detailKnob.setValue(state.brightness, { silent: true });
+  }
+
+  function openRoomDetail(room) {
+    if (!rooms()[room]) return;
+    activeRoom = room;
+    document.querySelectorAll(".room-card").forEach(c => c.classList.remove("active-room"));
+    const activeCard = document.querySelector(`.room-card[data-room="${room}"]`);
+    if (activeCard) activeCard.classList.add("active-room");
+    const detailIcon = document.getElementById("detailIcon");
+    const detailName = document.getElementById("detailName");
+    if (detailIcon) detailIcon.innerHTML = ROOM_ICONS[room] || "&#127968;";
+    if (detailName) detailName.textContent = ROOM_NAMES[room] || room;
+    syncDetail();
+    if (roomDetail) {
+      roomDetail.classList.add("visible");
+      roomDetail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  if (roomGrid) {
+    roomGrid.addEventListener("click", (e) => {
+      const card = e.target.closest(".room-card");
+      if (!card) return;
+      if (e.target.closest("a")) return;
+      openRoomDetail(card.dataset.room);
+    });
+    roomGrid.querySelectorAll(".room-card").forEach(card => {
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("role", "button");
+      card.addEventListener("keydown", (e) => {
+        if (e.target === card && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          openRoomDetail(card.dataset.room);
+        }
+      });
+    });
+    device.onChange(() => { updateRoomUI(); syncDetail(); });
+    updateRoomUI();
+  }
+
+  if (closeDetail) {
+    closeDetail.addEventListener("click", () => {
+      roomDetail.classList.remove("visible");
+      document.querySelectorAll(".room-card").forEach(c => c.classList.remove("active-room"));
+      activeRoom = null;
+    });
+  }
+
+  if (detailToggleEl) {
+    detailToggleEl.addEventListener("click", () => {
+      if (!activeRoom) return;
+      device.setRoom(activeRoom, { on: !rooms()[activeRoom].on });
+    });
+  }
+
+  /* ════════════════════════════════════
+     ENTRY LIGHTING (PIR + light sensor)
+     ════════════════════════════════════ */
+  const autoGrid = document.getElementById("autoLightGrid");
+  const autoStatusDot = document.getElementById("autoStatusDot");
+  const autoStatusText = document.getElementById("autoStatusText");
+  const lightReading = document.getElementById("lightReading");
+  const simMotionBtn = document.getElementById("simMotionBtn");
+
+  function agoText(s) {
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.floor(s / 60) + " min ago";
+    return Math.floor(s / 3600) + " h ago";
+  }
+
+  function renderEntry() {
+    const st = device.state;
+    if (autoGrid) {
+      autoGrid.querySelectorAll(".auto-room-card").forEach(card => {
+        const selected = st.entryRooms.includes(card.dataset.autoRoom);
+        card.classList.toggle("selected", selected);
+        card.setAttribute("aria-pressed", selected);
+      });
+    }
+    const s = st.sensors;
+    if (autoStatusDot) autoStatusDot.classList.toggle("active", s.motion);
+    if (autoStatusText) {
+      if (s.motion) autoStatusText.textContent = "Motion detected";
+      else if (s.lastMotionAgo !== null) autoStatusText.textContent = "No motion · last seen " + agoText(s.lastMotionAgo);
+      else autoStatusText.textContent = "Waiting for motion...";
+    }
+    if (lightReading) {
+      lightReading.textContent = s.light === null
+        ? "No light sensor · entry lighting always allowed"
+        : "Ambient light " + s.light + "% · " + (s.dark ? "dark, entry lighting armed" : "bright, entry lighting paused");
+    }
+    if (simMotionBtn) simMotionBtn.hidden = !(st.device && st.device.simulated);
+  }
+
+  if (autoGrid) {
+    autoGrid.querySelectorAll(".auto-room-card").forEach(card => {
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("role", "button");
+    });
+    function toggleEntryRoom(card) {
+      const room = card.dataset.autoRoom;
+      const list = device.state.entryRooms.slice();
+      const idx = list.indexOf(room);
+      if (idx >= 0) list.splice(idx, 1);
+      else list.push(room);
+      device.setEntryRooms(list);
+    }
+    autoGrid.addEventListener("click", (e) => {
+      const card = e.target.closest(".auto-room-card");
+      if (card) toggleEntryRoom(card);
+    });
+    autoGrid.addEventListener("keydown", (e) => {
+      const card = e.target.closest(".auto-room-card");
+      if (card && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleEntryRoom(card); }
+    });
+    if (simMotionBtn) simMotionBtn.addEventListener("click", () => device.simulateMotion());
+    device.onChange(renderEntry);
+    renderEntry();
+  }
+
+  /* ════════════════════════════════════
+     ROOM PAGE (room.html?id=xxx) — swipe, arrows, keyboard
+     ════════════════════════════════════ */
+  const roomPanel = document.getElementById("roomPanel");
+  if (roomPanel) {
+    const params = new URLSearchParams(window.location.search);
+    let currentRoomId = ROOM_ORDER.includes(params.get("id")) ? params.get("id") : "living";
+
+    const iconEl = document.getElementById("rpIcon");
+    const nameEl = document.getElementById("rpName");
+    const subEl = document.getElementById("rpSub");
+    const bulbWrapper = document.getElementById("rpBulbWrapper");
+    const bulbGlass = document.getElementById("rpBulbGlass");
+    const bulbGlow = document.getElementById("rpBulbGlow");
+    const statusDot = document.getElementById("rpStatusDot");
+    const statusText = document.getElementById("rpStatusText");
+    const toggleBtn = document.getElementById("rpToggle");
+    const toggleLabel = document.getElementById("rpToggleLabel");
+    const filaments = document.querySelectorAll("#rpBulbWrapper .bulb-filament");
+    const knobEl = document.getElementById("rpKnob");
+    const rpPrevBtn = document.getElementById("rpPrevBtn");
+    const rpNextBtn = document.getElementById("rpNextBtn");
+    const rpCounter = document.getElementById("rpCounter");
+    let wasOn = null;
+
+    function setRoomLabels(id) {
+      const st = rooms()[id];
+      if (iconEl) iconEl.innerHTML = ROOM_ICONS[id] || "&#127968;";
+      if (nameEl) nameEl.textContent = ROOM_NAMES[id] || id;
+      if (subEl) subEl.textContent = (ROOM_NAMES[id] || id) + " light · " + hwLabel(st);
+      document.title = "Nather — " + (ROOM_NAMES[id] || id);
+    }
+
+    const rpKnob = knobEl ? createKnob(knobEl, {
+      label: "Brightness",
+      initialValue: rooms()[currentRoomId].brightness,
+      onChange: (v) => device.setRoom(currentRoomId, { brightness: v })
+    }) : null;
+
+    function syncUI() {
+      const st = rooms()[currentRoomId];
+      const isOn = st.on;
+      if (toggleBtn) {
+        toggleBtn.classList.toggle("on", isOn);
+        toggleBtn.setAttribute("aria-pressed", isOn);
+      }
+      renderBulb(bulbGlass, bulbGlow, isOn, st.brightness);
+      if (statusDot) statusDot.classList.toggle("on", isOn);
+      filaments.forEach(f => { f.style.opacity = isOn ? "1" : "0.3"; });
+      if (statusText) statusText.textContent = isOn ? (st.auto ? "On (motion)" : "On") : "Off";
+      if (toggleLabel) toggleLabel.textContent = isOn ? "ON" : "OFF";
+      if (rpKnob && !rpKnob.isDragging()) rpKnob.setValue(st.brightness, { silent: true });
+      if (isOn && wasOn === false) pulseBulb(bulbWrapper);
+      wasOn = isOn;
+    }
+
+    function updateRoomCounter() {
+      const idx = ROOM_ORDER.indexOf(currentRoomId);
+      if (rpCounter) rpCounter.textContent = (idx + 1) + " / " + ROOM_ORDER.length;
+      if (rpPrevBtn) rpPrevBtn.disabled = idx === 0;
+      if (rpNextBtn) rpNextBtn.disabled = idx === ROOM_ORDER.length - 1;
+    }
+
+    function switchToRoom(id) {
+      if (id === currentRoomId) return;
+      currentRoomId = id;
+      wasOn = null;
+      setRoomLabels(id);
+      syncUI();
+      history.replaceState(null, "", "?id=" + id);
+      updateRoomCounter();
+      if (rooms()[id].on) pulseBulb(bulbWrapper);
+    }
+
+    setRoomLabels(currentRoomId);
+    updateRoomCounter();
+    syncUI();
+    if (rooms()[currentRoomId].on) pulseBulb(bulbWrapper);
+    device.onChange(() => { setRoomLabels(currentRoomId); syncUI(); });
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        device.setRoom(currentRoomId, { on: !rooms()[currentRoomId].on });
+      });
+    }
+
+    /* ─── ROOM TRANSITION ENGINE ─── */
+
+    let rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
+
+    /* Slides the panel in from the correct side after content has been swapped.
+       Called after the slide-out animation finishes (from either touch or buttons). */
+    function slideInRoom(dir, targetId) {
+      rSwipe.animating = true;
+      roomPanel.style.pointerEvents = "none";
+
+      const slideDir = dir === "next" ? "left" : "right";
+      const inT = 300;
+
+      switchToRoom(targetId);
+
+      roomPanel.style.transition = "none";
+      roomPanel.style.transform = "translateX(" + (slideDir === "left" ? "" : "-") + "100%)";
+      roomPanel.style.opacity = "0";
+      void roomPanel.offsetWidth;
+
+      roomPanel.style.transition = "transform " + inT + "ms cubic-bezier(0.22,1,0.36,1), opacity " + inT + "ms ease";
+      roomPanel.style.transform = "translateX(0)";
+      roomPanel.style.opacity = "1";
+
+      setTimeout(() => {
+        roomPanel.style.transition = "";
+        roomPanel.style.pointerEvents = "";
+        rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
+      }, inT + 30);
+    }
+
+    /* Full transition for buttons / keyboard: slide out, then slide in. */
+    function transitionRoom(dir, targetId) {
+      if (rSwipe.animating) return;
+      rSwipe.animating = true;
+      roomPanel.style.pointerEvents = "none";
+
+      const slideDir = dir === "next" ? "left" : "right";
+      const outT = 220;
+
+      roomPanel.style.transition = "transform " + outT + "ms cubic-bezier(0.22,1,0.36,1), opacity " + outT + "ms ease";
+      roomPanel.style.transform = "translateX(" + (slideDir === "left" ? "-" : "") + "100%)";
+      roomPanel.style.opacity = "0";
+
+      setTimeout(() => {
+        rSwipe.animating = false;
+        slideInRoom(dir, targetId);
+      }, outT);
+    }
+
+    /* ─── TOUCH SWIPE — finger follows ─── */
+
+    document.addEventListener("touchstart", (e) => {
+      if (rSwipe.animating) return;
+      if (e.target.closest(".knob-container") || e.target.closest(".toggle") ||
+          e.target.closest(".navbar") || e.target.closest("a") ||
+          e.target.closest(".rp-nav-btn")) return;
+      rSwipe.startX = e.touches[0].clientX;
+      rSwipe.deltaX = 0;
+      rSwipe.swiping = false;
+    }, { passive: true });
+
+    document.addEventListener("touchmove", (e) => {
+      if (rSwipe.animating) return;
+      if (!rSwipe.startX) return;
+
+      const dx = e.touches[0].clientX - rSwipe.startX;
+
+      if (!rSwipe.swiping && Math.abs(dx) > 12) {
+        rSwipe.swiping = true;
+      }
+      if (!rSwipe.swiping) return;
+      e.preventDefault();
+
+      const idx = ROOM_ORDER.indexOf(currentRoomId);
+      let bounded = dx;
+      if (idx === 0 && dx > 0) bounded = dx * 0.2;
+      if (idx === ROOM_ORDER.length - 1 && dx < 0) bounded = dx * 0.2;
+
+      rSwipe.deltaX = bounded;
+      roomPanel.style.transition = "none";
+      roomPanel.style.transform = "translateX(" + bounded + "px)";
+      roomPanel.style.opacity = Math.max(0.5, 1 - Math.abs(bounded) / 500);
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+      if (rSwipe.animating) return;
+      if (!rSwipe.swiping) {
+        rSwipe.startX = 0;
+        roomPanel.style.transition = "";
+        roomPanel.style.transform = "";
+        roomPanel.style.opacity = "";
+        return;
+      }
+
+      const dx = rSwipe.deltaX;
+      const idx = ROOM_ORDER.indexOf(currentRoomId);
+      const threshold = 80;
+
+      if (dx < -threshold && idx < ROOM_ORDER.length - 1) {
+        rSwipe.animating = true;
+        roomPanel.style.pointerEvents = "none";
+        roomPanel.style.transition = "transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease";
+        roomPanel.style.transform = "translateX(-100%)";
+        roomPanel.style.opacity = "0";
+        setTimeout(() => {
+          rSwipe.animating = false;
+          slideInRoom("next", ROOM_ORDER[idx + 1]);
+        }, 220);
+      } else if (dx > threshold && idx > 0) {
+        rSwipe.animating = true;
+        roomPanel.style.pointerEvents = "none";
+        roomPanel.style.transition = "transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease";
+        roomPanel.style.transform = "translateX(100%)";
+        roomPanel.style.opacity = "0";
+        setTimeout(() => {
+          rSwipe.animating = false;
+          slideInRoom("prev", ROOM_ORDER[idx - 1]);
+        }, 220);
+      } else {
+        roomPanel.style.transition = "transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease";
+        roomPanel.style.transform = "translateX(0)";
+        roomPanel.style.opacity = "1";
+        setTimeout(() => {
+          roomPanel.style.transition = "";
+          rSwipe = { startX: 0, deltaX: 0, swiping: false, animating: false };
+        }, 380);
+      }
+    });
+
+    /* ─── ARROW BUTTONS ─── */
+
+    if (rpPrevBtn) {
+      rpPrevBtn.addEventListener("click", () => {
+        const idx = ROOM_ORDER.indexOf(currentRoomId);
+        if (idx > 0) transitionRoom("prev", ROOM_ORDER[idx - 1]);
+      });
+    }
+
+    if (rpNextBtn) {
+      rpNextBtn.addEventListener("click", () => {
+        const idx = ROOM_ORDER.indexOf(currentRoomId);
+        if (idx < ROOM_ORDER.length - 1) transitionRoom("next", ROOM_ORDER[idx + 1]);
+      });
+    }
+
+    /* ─── KEYBOARD ARROW KEYS ─── */
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
+      const idx = ROOM_ORDER.indexOf(currentRoomId);
+      if (e.key === "ArrowLeft" && idx > 0) {
+        e.preventDefault();
+        transitionRoom("prev", ROOM_ORDER[idx - 1]);
+      }
+      if (e.key === "ArrowRight" && idx < ROOM_ORDER.length - 1) {
+        e.preventDefault();
+        transitionRoom("next", ROOM_ORDER[idx + 1]);
+      }
+    });
   }
 
 });

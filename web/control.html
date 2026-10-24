@@ -162,7 +162,7 @@
         </div>
 
       <div class="auto-light-section accordion">
-        <div class="accordion-header" id="autoLightToggle">
+        <div class="accordion-header" id="autoLightToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="autoLightBody">
           <div class="auto-light-header">
             <div class="al-icon">&#128161;</div>
             <h2>Entry Lighting</h2>
@@ -172,6 +172,7 @@
         <div class="accordion-body" id="autoLightBody">
           <p class="auto-light-desc">
             Select rooms where the light should turn ON automatically when the PIR sensor detects you entering the house.
+            If a light sensor is fitted, this only happens when it is dark, and motion-lit rooms switch off again after 5 minutes without movement.
           </p>
           <div class="auto-light-grid" id="autoLightGrid">
             <div class="auto-room-card" data-auto-room="living">
@@ -209,7 +210,9 @@
             <span class="as-dot" id="autoStatusDot"></span>
             <span class="as-label">PIR Status:</span>
             <span class="as-value" id="autoStatusText">Waiting for motion...</span>
+            <button class="sim-motion-btn" id="simMotionBtn" type="button" hidden>Simulate motion</button>
           </div>
+          <p class="auto-light-reading" id="lightReading"></p>
         </div>
       </div>
 
@@ -221,6 +224,8 @@
     <div class="container">&copy; 2026 Nather.</div>
   </footer>
 
+  <script src="js/engine.js"></script>
+  <script src="js/device.js"></script>
   <script src="js/script.js"></script>
 </body>
 </html>

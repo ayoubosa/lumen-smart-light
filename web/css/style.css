@@ -501,24 +501,28 @@ body.lit::before {
 
 .knob-track {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.04);
+  stroke: rgba(255, 255, 255, 0.06);
   stroke-width: 7;
+  stroke-dasharray: 329.87 439.82;   /* 270° of the 439.82 circumference */
+  stroke-linecap: round;
+  transform: rotate(135deg);
+  transform-origin: center;
 }
 
 .knob-fill {
   fill: none;
   stroke: url(#knobGradient);
   stroke-width: 7;
-  stroke-dasharray: 329.87 109.96;
-  stroke-dashoffset: 329.87;
-  transition: stroke-dashoffset 0.18s var(--ease-out), filter 0.3s ease;
-  transform: rotate(-135deg);
+  stroke-dasharray: 0 439.82;   /* script.js sets the visible length */
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.18s var(--ease-out), filter 0.3s ease;
+  transform: rotate(135deg);
   transform-origin: center;
   filter: drop-shadow(0 0 4px rgba(245, 179, 66, 0.2));
 }
 
 .knob-fill.dragging {
-  transition: stroke-dashoffset 0.04s linear;
+  transition: stroke-dasharray 0.04s linear;
   filter: drop-shadow(0 0 14px rgba(245, 179, 66, 0.5));
 }
 
@@ -1636,6 +1640,11 @@ footer {
     display: none;
   }
 
+  .nav-links > li.nav-dropdown {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .nav-dropdown.open .dropdown-menu {
     display: block;
     position: static;
@@ -1809,3 +1818,202 @@ footer {
     padding: 10px 12px;
   }
 }
+
+/* ═══════════ CONTROLLER CONNECTION ═══════════ */
+
+.conn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 14px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-hover);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.conn-badge:hover { color: var(--text-primary); border-color: var(--border-active); }
+
+.conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.conn-badge[data-link="online"] .conn-dot {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(68, 217, 158, 0.6);
+}
+
+.conn-badge[data-link="offline"] .conn-dot {
+  background: #f06d6d;
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+.conn-badge[data-link="demo"] .conn-dot { background: var(--secondary); }
+
+.conn-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 16px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-hover);
+  background: rgba(12, 12, 24, 0.97);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+}
+
+.conn-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.conn-list { display: grid; gap: 7px; }
+
+.conn-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+}
+
+.conn-k { color: var(--text-tertiary); }
+
+.conn-v {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.conn-note {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.conn-error {
+  margin-top: 10px;
+  font-size: 0.76rem;
+  color: #f08a8a;
+}
+
+.conn-form { display: grid; gap: 8px; font-size: 0.78rem; }
+
+.conn-input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hover);
+  background: var(--bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.conn-input:focus { outline: none; border-color: var(--accent); }
+
+.conn-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+
+.conn-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #07070e;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.conn-btn.ghost {
+  background: transparent;
+  border-color: var(--border-active);
+  color: var(--text-secondary);
+}
+
+.conn-btn.ghost:hover { color: var(--text-primary); }
+
+/* hardware tag on control-panel room cards */
+.room-hw {
+  display: inline-block;
+  margin: 2px 0 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-hover);
+}
+
+.room-hw[data-hw="pwm"],
+.room-hw[data-hw="relay"] {
+  color: var(--accent);
+  border-color: rgba(245, 179, 66, 0.25);
+}
+
+/* entry lighting extras */
+.sim-motion-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-active);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.sim-motion-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.auto-light-reading {
+  margin-top: 10px;
+  font-size: 0.76rem;
+  color: var(--text-tertiary);
+}
+
+.auto-light-reading:empty { display: none; }
+
+/* keyboard focus for custom controls */
+.knob-container:focus-visible,
+.room-card:focus-visible,
+.auto-room-card:focus-visible,
+.accordion-header:focus-visible,
+.conn-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius);
+}
+
+.knob-container:focus-visible { border-radius: 50%; }
+
+@media (max-width: 768px) {
+  .conn-badge { margin-left: auto; margin-right: 8px; padding: 5px 9px; }
+}
+
+@media (max-width: 340px) {
+  .conn-badge .conn-text { display: none; }
+}
+
+/* keep nav links and the connection badge together on the right */
+.navbar .nav-links { margin-left: auto; }
