@@ -76,7 +76,7 @@ function createMockDevice(options) {
   }
 
   function broadcast() {
-    const payload = "event: state\ndata: " + JSON.stringify(state()) + "\n\n";
+    const payload = "event: state\nid: " + Date.now() + "\ndata: " + JSON.stringify(state()) + "\n\n";
     clients.forEach(res => res.write(payload));
   }
 
@@ -86,13 +86,15 @@ function createMockDevice(options) {
   heartbeat.unref();
   ticker.unref();
 
+  // Same rule as the firmware: other origins may call the API only when a
+  // token protects the writes. Otherwise any web page could switch the lights.
+  const cors = opts.token
+    ? { "Access-Control-Allow-Origin": "*" }
+    : {};
+
   function send(res, status, body) {
     const data = body === undefined ? "" : JSON.stringify(body);
-    res.writeHead(status, {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*"
-    });
+    res.writeHead(status, Object.assign({ "Content-Type": "application/json", "Cache-Control": "no-store" }, cors));
     res.end(data);
   }
 
@@ -122,7 +124,7 @@ function createMockDevice(options) {
     let rel = decodeURIComponent(pathname);
     if (rel.endsWith("/")) rel += "index.html";
     const file = path.normalize(path.join(WEB_ROOT, rel));
-    if (!file.startsWith(WEB_ROOT)) return send(res, 403, { error: "Forbidden" });
+    if (!file.startsWith(WEB_ROOT + path.sep)) return send(res, 403, { error: "Forbidden" });
     fs.readFile(file, (err, data) => {
       if (err) return send(res, 404, { error: "Not found" });
       res.writeHead(200, { "Content-Type": TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
@@ -135,11 +137,10 @@ function createMockDevice(options) {
     const p = url.pathname;
 
     if (req.method === "OPTIONS") {
-      res.writeHead(204, {
-        "Access-Control-Allow-Origin": "*",
+      res.writeHead(204, opts.token ? Object.assign({
         "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      });
+      }, cors) : {});
       return res.end();
     }
 
@@ -152,12 +153,11 @@ function createMockDevice(options) {
       if (p === "/api/state" && req.method === "GET") return send(res, 200, state());
 
       if (p === "/api/events" && req.method === "GET") {
-        res.writeHead(200, {
+        res.writeHead(200, Object.assign({
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-store",
-          "Connection": "keep-alive",
-          "Access-Control-Allow-Origin": "*"
-        });
+          "Connection": "keep-alive"
+        }, cors));
         res.write("retry: 2000\n");
         res.write("event: state\ndata: " + JSON.stringify(state()) + "\n\n");
         clients.add(res);

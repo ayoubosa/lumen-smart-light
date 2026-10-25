@@ -45,6 +45,12 @@ int findRoom(const char* id) {
   return -1;
 }
 
+void writeRoomIds(JsonArray out, config::RoomMask rooms) {
+  for (uint8_t i = 0; i < config::kRoomCount; i++) {
+    if (rooms & config::roomBit(i)) out.add(config::kRooms[i].id);
+  }
+}
+
 void writeRoom(JsonObject out, uint8_t i, const RoomState& r) {
   out["on"] = r.on();
   out["brightness"] = r.brightness;
@@ -60,6 +66,11 @@ size_t writeState(char* buf, size_t size) {
 
   JsonDocument doc;
   doc["mode"] = s.mode == Mode::Auto ? "auto" : "manual";
+
+  JsonObject rules = doc["rules"].to<JsonObject>();
+  rules["entryBrightness"] = config::kEntryBrightness;
+  rules["autoOffSeconds"] = config::kAutoOffMs / 1000;
+  rules["darkThreshold"] = config::kDarkThresholdPct;
 
   JsonObject device = doc["device"].to<JsonObject>();
   device["name"] = config::kHostname;
@@ -83,11 +94,10 @@ size_t writeState(char* buf, size_t size) {
   device["simulated"] = false;
 
   JsonObject rooms = doc["rooms"].to<JsonObject>();
-  JsonArray entry = doc["entryRooms"].to<JsonArray>();
   for (uint8_t i = 0; i < config::kRoomCount; i++) {
     writeRoom(rooms[config::kRooms[i].id].to<JsonObject>(), i, s.rooms[i]);
-    if (s.entryMask & (1u << i)) entry.add(config::kRooms[i].id);
   }
+  writeRoomIds(doc["entryRooms"].to<JsonArray>(), s.entryMask);
 
   JsonObject sensors = doc["sensors"].to<JsonObject>();
   sensors["motion"] = s.motion;
@@ -97,6 +107,10 @@ size_t writeState(char* buf, size_t size) {
   else sensors["light"] = nullptr;
   sensors["dark"] = s.dark;
 
+  if (measureJson(doc) >= size) {
+    ESP_LOGE(kTag, "state JSON needs %u bytes, buffer is %u", unsigned(measureJson(doc)), unsigned(size));
+    return 0;
+  }
   return serializeJson(doc, buf, size);
 }
 
@@ -187,19 +201,16 @@ void handleEntryRooms(AsyncWebServerRequest* req) {
   JsonArrayConst list = body["rooms"];
   if (list.isNull()) return sendError(req, 400, "rooms must be an array of room ids");
 
-  uint16_t mask = 0;
+  config::RoomMask rooms = 0;
   for (JsonVariantConst v : list) {
     const int room = v.is<const char*>() ? findRoom(v.as<const char*>()) : -1;
     if (room < 0) return sendError(req, 400, "Unknown room in rooms");
-    mask |= 1u << room;
+    rooms |= config::roomBit(room);
   }
-  lights->setEntryRooms(mask);
+  lights->setEntryRooms(rooms);
 
   JsonDocument out;
-  JsonArray rooms = out["rooms"].to<JsonArray>();
-  for (uint8_t i = 0; i < config::kRoomCount; i++) {
-    if (mask & (1u << i)) rooms.add(config::kRooms[i].id);
-  }
+  writeRoomIds(out["rooms"].to<JsonArray>(), rooms);
   sendDoc(req, out);
 }
 
@@ -207,10 +218,9 @@ void handleMode(AsyncWebServerRequest* req) {
   JsonDocument body;
   if (!parseAuthorizedBody(req, body)) return;
   const char* mode = body["mode"] | "";
-  if (strcmp(mode, "auto") != 0 && strcmp(mode, "manual") != 0) {
-    return sendError(req, 400, "mode must be \"auto\" or \"manual\"");
-  }
-  lights->setMode(strcmp(mode, "auto") == 0 ? Mode::Auto : Mode::Manual);
+  const bool isAuto = strcmp(mode, "auto") == 0;
+  if (!isAuto && strcmp(mode, "manual") != 0) return sendError(req, 400, "mode must be \"auto\" or \"manual\"");
+  lights->setMode(isAuto ? Mode::Auto : Mode::Manual);
   JsonDocument out;
   out["mode"] = mode;
   sendDoc(req, out);
@@ -218,7 +228,7 @@ void handleMode(AsyncWebServerRequest* req) {
 
 void handleState(AsyncWebServerRequest* req) {
   char buf[kStateJsonBytes];
-  writeState(buf, sizeof buf);
+  if (!writeState(buf, sizeof buf)) return sendError(req, 500, "State too large");
   sendJson(req, 200, buf);
 }
 
@@ -227,10 +237,13 @@ void handleState(AsyncWebServerRequest* req) {
 void apiBegin(Lights& l) {
   lights = &l;
 
-  // Lets a dashboard served from another machine on the LAN call the API.
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
-  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Pages served from another origin may call the API only when a token
+  // protects the writes; otherwise any web page open on the LAN could switch the lights.
+  if (API_TOKEN[0] != '\0') {
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
 
   server.on("/api/state", HTTP_GET, handleState);
   server.on("/api/rooms/*", HTTP_PUT, handleRoom, nullptr, collectBody);
@@ -239,8 +252,7 @@ void apiBegin(Lights& l) {
 
   events.onConnect([](AsyncEventSourceClient* client) {
     char buf[kStateJsonBytes];
-    writeState(buf, sizeof buf);
-    client->send(buf, "state", millis(), config::kSseRetryMs);
+    if (writeState(buf, sizeof buf)) client->send(buf, "state", millis(), config::kSseRetryMs);
   });
   server.addHandler(&events);
 
@@ -266,6 +278,5 @@ void apiPoll(uint32_t now) {
   lastPushMs = now;
   if (clientCount == 0) return;
   char buf[kStateJsonBytes];
-  writeState(buf, sizeof buf);
-  events.send(buf, "state", now);
+  if (writeState(buf, sizeof buf)) events.send(buf, "state", now);
 }

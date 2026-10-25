@@ -5,6 +5,7 @@
 #include "wifi_policy.h"
 
 using wifi::Actions;
+using wifi::JoinVia;
 using wifi::Policy;
 using wifi::State;
 
@@ -39,29 +40,29 @@ void tearDown() {}
 
 void boot_uses_the_cached_channel_when_there_is_one() {
   Policy p;
-  TEST_ASSERT_TRUE(p.start(0, true).usePin);
+  TEST_ASSERT_TRUE(p.start(0, true).via == JoinVia::CachedAp);
   Policy fresh;
   const Actions a = fresh.start(0, false);
   TEST_ASSERT_TRUE(a.connect);
-  TEST_ASSERT_FALSE(a.usePin);
+  TEST_ASSERT_TRUE(a.via == JoinVia::Scan);
 }
 
-void first_connection_saves_the_pin_and_keeps_mdns() {
+void first_connection_saves_the_ap_and_keeps_mdns() {
   Policy p;
   p.start(0, false);
   const Actions a = p.gotIp(1800);
-  TEST_ASSERT_TRUE(a.savePin);
+  TEST_ASSERT_TRUE(a.saveCachedAp);
   TEST_ASSERT_FALSE(a.restartMdns);
   TEST_ASSERT_TRUE(p.state() == State::Online);
 }
 
-void stale_pin_is_dropped_and_retried_at_once() {
+void stale_cached_ap_is_dropped_and_retried_at_once() {
   Policy p;
   p.start(0, true);
   const Actions a = p.disconnected(900);   // router moved to another channel
-  TEST_ASSERT_TRUE(a.forgetPin);
+  TEST_ASSERT_TRUE(a.forgetCachedAp);
   TEST_ASSERT_TRUE(a.connect);
-  TEST_ASSERT_FALSE(a.usePin);
+  TEST_ASSERT_TRUE(a.via == JoinVia::Scan);
 }
 
 void backoff_grows_then_settles_at_a_minute() {
@@ -86,9 +87,9 @@ void attempt_with_no_answer_times_out() {
   Policy p;
   uint32_t now = 0;
   p.start(now, false);
-  runFor(p, now, config::kWifiAttemptTimeoutMs + 100);
-  TEST_ASSERT_TRUE(p.state() == State::Waiting || p.state() == State::Connecting);
-  TEST_ASSERT_TRUE(p.failures() >= 1);
+  runFor(p, now, config::kWifiAttemptTimeoutMs + 100);   // last tick is exactly at the timeout
+  TEST_ASSERT_TRUE(p.state() == State::Waiting);
+  TEST_ASSERT_EQUAL_UINT8(1, p.failures());
 }
 
 void dropping_offline_retries_after_one_second() {
@@ -185,7 +186,7 @@ void router_back_is_joined_from_the_scan_result() {
   while (!scan.startScan) scan = runFor(p, now, 100);
   const Actions join = p.scanFinished(true, now);
   TEST_ASSERT_TRUE(join.connect);
-  TEST_ASSERT_TRUE(join.useScanResult);
+  TEST_ASSERT_TRUE(join.via == JoinVia::ScanResult);
   TEST_ASSERT_TRUE(p.gotIp(now).restartMdns);   // announce nather.local on the home network again
 }
 
@@ -236,8 +237,8 @@ void works_across_millis_wraparound() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(boot_uses_the_cached_channel_when_there_is_one);
-  RUN_TEST(first_connection_saves_the_pin_and_keeps_mdns);
-  RUN_TEST(stale_pin_is_dropped_and_retried_at_once);
+  RUN_TEST(first_connection_saves_the_ap_and_keeps_mdns);
+  RUN_TEST(stale_cached_ap_is_dropped_and_retried_at_once);
   RUN_TEST(backoff_grows_then_settles_at_a_minute);
   RUN_TEST(failed_attempt_waits_before_retrying);
   RUN_TEST(attempt_with_no_answer_times_out);

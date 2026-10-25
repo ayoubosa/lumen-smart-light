@@ -132,14 +132,41 @@ test("serves the website and refuses path traversal", async (t) => {
   assert.equal(res.status, 200);
   assert.match(await res.text(), /<title>[^<]*Nather<\/title>/);
   assert.equal((await fetch(d.base + "/js/device.js")).status, 200);
-  const evil = await fetch(d.base + "/..%2f..%2fpackage.json");
-  assert.notEqual(evil.status, 200);
+  // one level up is the repo root, where package.json really exists
+  assert.equal((await fetch(d.base + "/..%2fpackage.json")).status, 403);
 });
 
-test("CORS preflight is answered for cross-origin dashboards", async (t) => {
+test("other origins are refused unless a token protects the writes", async (t) => {
+  const open = await start();
+  t.after(open.close);
+  let res = await fetch(open.base + "/api/state");
+  assert.equal(res.headers.get("access-control-allow-origin"), null);
+  res = await fetch(open.base + "/api/rooms/living", { method: "OPTIONS" });
+  assert.equal(res.headers.get("access-control-allow-origin"), null);
+
+  const locked = await start({ token: "s3cret" });
+  t.after(locked.close);
+  res = await fetch(locked.base + "/api/rooms/living", { method: "OPTIONS" });
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get("access-control-allow-origin"), "*");
+  assert.match(res.headers.get("access-control-allow-headers"), /Authorization/);
+});
+
+test("wrong types get 400, exactly as the firmware answers", async (t) => {
   const d = await start();
   t.after(d.close);
-  const res = await fetch(d.base + "/api/rooms/living", { method: "OPTIONS" });
-  assert.equal(res.status, 204);
-  assert.match(res.headers.get("access-control-allow-headers"), /Authorization/);
+  for (const body of [{ brightness: "40" }, { brightness: true }, { on: "yes" }, { on: 1 }, [], "null"]) {
+    assert.equal((await put(d.base, "/api/rooms/living", body)).status, 400, JSON.stringify(body));
+  }
+  // null means "not sent", so on:true decides
+  const res = await put(d.base, "/api/rooms/living", { brightness: null, on: true });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).on, true);
+});
+
+test("state includes the rule numbers the page explains", async (t) => {
+  const d = await start();
+  t.after(d.close);
+  const s = await (await fetch(d.base + "/api/state")).json();
+  assert.deepEqual(s.rules, { entryBrightness: 70, autoOffSeconds: 300, darkThreshold: 30 });
 });

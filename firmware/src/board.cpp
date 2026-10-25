@@ -78,12 +78,12 @@ void sensorsPoll(Lights& lights, uint32_t now) {
     const bool level = digitalRead(config::kPirPin) == HIGH;
     if (level != pirLevel) {
       pirLevel = level;
-      const uint16_t switched = lights.onMotion(level, now);
+      const config::RoomMask switched = lights.onMotion(level, now);
       ESP_LOGI(kTag, "motion %s, switched on 0x%02x", level ? "start" : "end", switched);
     }
   }
 
-  const uint16_t switchedOff = lights.tick(now);
+  const config::RoomMask switchedOff = lights.tick(now);
   if (switchedOff) ESP_LOGI(kTag, "auto-off 0x%02x", switchedOff);
 
   if constexpr (config::kLdrPin >= 0) {
@@ -104,7 +104,7 @@ void sensorsPoll(Lights& lights, uint32_t now) {
 
 namespace {
 Preferences prefs;
-uint16_t savedEntryMask = 0;
+config::RoomMask savedEntryMask = 0;
 bool savedAuto = true;
 }  // namespace
 
@@ -116,7 +116,7 @@ void settingsBegin(Lights& lights) {
 }
 
 void settingsPoll(const Lights& lights) {
-  const uint16_t mask = lights.entryMask();
+  const config::RoomMask mask = lights.entryMask();
   const bool isAuto = lights.mode() == Mode::Auto;
   if (mask != savedEntryMask) {
     prefs.putUShort("entry", mask);

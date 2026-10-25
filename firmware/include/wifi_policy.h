@@ -11,20 +11,21 @@ namespace wifi {
 
 enum class State : uint8_t { Connecting, Online, Waiting };
 
+// Where to point begin(): let the radio scan, or go straight to a known
+// access point (BSSID + channel), which skips the channel scan.
+enum class JoinVia : uint8_t { Scan, CachedAp, ScanResult };
+
 struct Actions {
-  bool connect = false;          // disconnect() then begin()
-  bool usePin = false;           //   ...with the cached BSSID and channel (skips the channel scan)
-  bool useScanResult = false;    //   ...with the BSSID and channel the last scan found
-  bool forgetPin = false;        // the cached BSSID/channel did not work
-  bool savePin = false;          // connected: remember BSSID/channel for the next boot
+  bool connect = false;            // disconnect() then begin()
+  JoinVia via = JoinVia::Scan;
+  bool forgetCachedAp = false;     // the saved BSSID/channel did not work
+  bool saveCachedAp = false;       // connected: remember BSSID/channel for the next boot
   bool openHotspot = false;
   bool closeHotspot = false;
-  bool startScan = false;        // look for the home network without leaving the hotspot
+  bool startScan = false;          // look for the home network without leaving the hotspot
   bool restartMdns = false;
 
-  bool any() const {
-    return connect || forgetPin || savePin || openHotspot || closeHotspot || startScan || restartMdns;
-  }
+  Actions& operator|=(const Actions& o);
 };
 
 struct Timing {
@@ -41,7 +42,7 @@ class Policy {
  public:
   explicit Policy(Timing timing = {}) : t_(timing) {}
 
-  Actions start(uint32_t now, bool havePin);
+  Actions start(uint32_t now, bool haveCachedAp);
   Actions gotIp(uint32_t now);
   Actions disconnected(uint32_t now);
   Actions scanFinished(bool homeVisible, uint32_t now);
@@ -54,14 +55,14 @@ class Policy {
   static uint32_t backoffMs(uint8_t failures);
 
  private:
-  Actions attempt(uint32_t now, bool pinned, bool fromScan);
+  Actions attempt(uint32_t now, JoinVia via);
   Actions failAttempt(uint32_t now);
 
   Timing t_;
   State state_ = State::Waiting;
   bool hotspotOn_ = false;
   bool everOnline_ = false;
-  bool pinnedAttempt_ = false;
+  bool cachedAttempt_ = false;
   bool scanning_ = false;
   uint8_t failures_ = 0;
   uint32_t attemptStart_ = 0;

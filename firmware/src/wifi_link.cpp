@@ -28,41 +28,45 @@ struct Event {
   uint8_t reason;
 };
 
-struct Pin {
+// One access point of the home network, as BSSID + channel.
+struct AccessPoint {
   uint8_t bssid[6] = {};
   uint8_t channel = 0;
   bool valid() const { return channel != 0; }
+  bool operator==(const AccessPoint& o) const {
+    return channel == o.channel && memcmp(bssid, o.bssid, sizeof bssid) == 0;
+  }
 };
 
 QueueHandle_t events;
 wifi::Policy policy;
 Preferences store;
-Pin cached;        // from flash: where the router was last time
-Pin scanned;       // from the latest scan while the hotspot was up
+AccessPoint cachedAp;    // from flash: where the router was last time
+AccessPoint scannedAp;   // from the latest scan while the hotspot was up
 std::atomic<bool> hotspotOn{false};
 uint32_t selfDisconnectAt = 0;
 
-void loadPin() {
+void loadCachedAp() {
   store.begin("wifi", false);
-  if (store.getBytes("bssid", cached.bssid, sizeof cached.bssid) == sizeof cached.bssid) {
-    cached.channel = store.getUChar("ch", 0);
+  if (store.getBytes("bssid", cachedAp.bssid, sizeof cachedAp.bssid) == sizeof cachedAp.bssid) {
+    cachedAp.channel = store.getUChar("ch", 0);
   }
 }
 
-void savePin() {
-  Pin now;
-  memcpy(now.bssid, WiFi.BSSID(), sizeof now.bssid);
-  now.channel = WiFi.channel();
-  if (now.channel == cached.channel && memcmp(now.bssid, cached.bssid, sizeof now.bssid) == 0) return;
-  store.putBytes("bssid", now.bssid, sizeof now.bssid);
-  store.putUChar("ch", now.channel);
-  cached = now;
+void saveCachedAp() {
+  AccessPoint current;
+  memcpy(current.bssid, WiFi.BSSID(), sizeof current.bssid);
+  current.channel = WiFi.channel();
+  if (current == cachedAp) return;   // spare the flash
+  store.putBytes("bssid", current.bssid, sizeof current.bssid);
+  store.putUChar("ch", current.channel);
+  cachedAp = current;
 }
 
-void forgetPin() {
+void forgetCachedAp() {
   store.remove("bssid");
   store.remove("ch");
-  cached = Pin{};
+  cachedAp = AccessPoint{};
 }
 
 void restartMdns() {
@@ -70,14 +74,14 @@ void restartMdns() {
   if (MDNS.begin(config::kHostname)) MDNS.addService("http", "tcp", config::kHttpPort);
 }
 
-void connect(const Pin* pin, uint32_t now) {
+void connect(const AccessPoint* ap, uint32_t now) {
   if (WiFi.status() != WL_DISCONNECTED && WiFi.status() != WL_IDLE_STATUS) {
     selfDisconnectAt = now;
     WiFi.disconnect();
   }
-  if (pin && pin->valid()) {
-    ESP_LOGI(kTag, "joining \"%s\" on channel %u", WIFI_SSID, pin->channel);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD, pin->channel, pin->bssid);
+  if (ap && ap->valid()) {
+    ESP_LOGI(kTag, "joining \"%s\" on channel %u", WIFI_SSID, ap->channel);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD, ap->channel, ap->bssid);
   } else {
     ESP_LOGI(kTag, "joining \"%s\"", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -85,7 +89,7 @@ void connect(const Pin* pin, uint32_t now) {
 }
 
 void openHotspot() {
-  const uint8_t channel = cached.valid() ? cached.channel : 1;   // the router's channel, so joining it later needs no hop
+  const uint8_t channel = cachedAp.valid() ? cachedAp.channel : 1;   // the router's channel, so joining it later needs no hop
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(config::kHotspotSsid, AP_PASSWORD, channel);
   hotspotOn = true;
@@ -99,12 +103,20 @@ void closeHotspot() {
   ESP_LOGI(kTag, "hotspot closed");
 }
 
+const AccessPoint* target(wifi::JoinVia via) {
+  switch (via) {
+    case wifi::JoinVia::CachedAp: return &cachedAp;
+    case wifi::JoinVia::ScanResult: return &scannedAp;
+    default: return nullptr;
+  }
+}
+
 void apply(const wifi::Actions& a, uint32_t now) {
-  if (a.forgetPin) forgetPin();
+  if (a.forgetCachedAp) forgetCachedAp();
   if (a.openHotspot) openHotspot();
-  if (a.connect) connect(a.useScanResult ? &scanned : a.usePin ? &cached : nullptr, now);
+  if (a.connect) connect(target(a.via), now);
   if (a.startScan) WiFi.scanNetworks(true, false, false, kScanMsPerChannel);
-  if (a.savePin) savePin();
+  if (a.saveCachedAp) saveCachedAp();
   if (a.closeHotspot) closeHotspot();
   if (a.restartMdns) restartMdns();
 }
@@ -115,8 +127,8 @@ bool readScan() {
   bool found = false;
   for (int16_t i = 0; i < count && !found; i++) {
     if (WiFi.SSID(i) != WIFI_SSID) continue;
-    memcpy(scanned.bssid, WiFi.BSSID(i), sizeof scanned.bssid);
-    scanned.channel = WiFi.channel(i);
+    memcpy(scannedAp.bssid, WiFi.BSSID(i), sizeof scannedAp.bssid);
+    scannedAp.channel = WiFi.channel(i);
     found = true;
   }
   WiFi.scanDelete();
@@ -147,8 +159,9 @@ void wifiBegin() {
   WiFi.setSleep(false);            // modem sleep delays every reply noticeably
   restartMdns();                   // answers on whichever interface comes up first
 
-  loadPin();
-  apply(policy.start(millis(), cached.valid()), millis());
+  loadCachedAp();
+  const uint32_t now = millis();
+  apply(policy.start(now, cachedAp.valid()), now);
 }
 
 void wifiPoll(uint32_t now) {

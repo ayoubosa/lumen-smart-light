@@ -33,9 +33,9 @@ Result Lights::setOn(uint8_t room, bool on) {
   return Result::Ok;
 }
 
-void Lights::setEntryRooms(uint16_t mask) {
+void Lights::setEntryRooms(config::RoomMask rooms) {
   Lock lock(mutex_);
-  entryMask_ = mask & ((1u << config::kRoomCount) - 1);
+  entryMask_ = rooms & config::kAllRooms;
   changed_ = true;
 }
 
@@ -49,38 +49,38 @@ void Lights::setMode(Mode mode) {
   changed_ = true;
 }
 
-void Lights::restore(uint16_t entryMask, Mode mode) {
+void Lights::restore(config::RoomMask entryRooms, Mode mode) {
   Lock lock(mutex_);
-  entryMask_ = entryMask & ((1u << config::kRoomCount) - 1);
+  entryMask_ = entryRooms & config::kAllRooms;
   mode_ = mode;
 }
 
-uint16_t Lights::onMotion(bool active, uint32_t now) {
+config::RoomMask Lights::onMotion(bool active, uint32_t now) {
   Lock lock(mutex_);
-  uint16_t switched = 0;
+  config::RoomMask switched = 0;
   if (active != motion_) changed_ = true;
   motion_ = active;
   sawMotion_ = true;
   lastMotionMs_ = now;   // on both edges: auto-off counts from when movement stopped
   if (!active || mode_ != Mode::Auto || !dark()) return 0;
   for (uint8_t i = 0; i < config::kRoomCount; i++) {
-    if ((entryMask_ & (1u << i)) && !rooms_[i].on()) {
+    if ((entryMask_ & config::roomBit(i)) && !rooms_[i].on()) {
       write(i, config::kEntryBrightness, true);
-      switched |= 1u << i;
+      switched |= config::roomBit(i);
     }
   }
   return switched;
 }
 
-uint16_t Lights::tick(uint32_t now) {
+config::RoomMask Lights::tick(uint32_t now) {
   Lock lock(mutex_);
   if (config::kAutoOffMs == 0 || mode_ != Mode::Auto || motion_ || !sawMotion_) return 0;
   if (now - lastMotionMs_ < config::kAutoOffMs) return 0;
-  uint16_t switched = 0;
+  config::RoomMask switched = 0;
   for (uint8_t i = 0; i < config::kRoomCount; i++) {
     if (rooms_[i].byMotion && rooms_[i].on()) {
       write(i, 0, false);
-      switched |= 1u << i;
+      switched |= config::roomBit(i);
     }
   }
   return switched;
@@ -107,7 +107,7 @@ Snapshot Lights::snapshot(uint32_t now) const {
   return s;
 }
 
-uint16_t Lights::entryMask() const {
+config::RoomMask Lights::entryMask() const {
   Lock lock(mutex_);
   return entryMask_;
 }

@@ -3,9 +3,9 @@ name: Deploy demo to GitHub Pages
 # Publishes web/ as the live demo. With no controller reachable from an
 # HTTPS page, the site runs its in-browser demo mode.
 
+# Manual only while the repository is private: a Pages site is public even
+# when the repo is not. Run it from the Actions tab when the project goes public.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -28,7 +28,7 @@ jobs:
         with:
           path: ~/.platformio
           key: pio-${{ hashFiles('firmware/platformio.ini') }}
-      - run: pip install platformio
+      - run: pip install "platformio==6.1.*"
       - name: Lighting and Wi-Fi logic tests (on the runner, no board needed)
         run: pio test -d firmware -e native
       - name: Build firmware

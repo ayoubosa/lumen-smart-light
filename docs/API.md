@@ -1,6 +1,6 @@
 # Controller API
 
-The ESP32 firmware (`firmware/src/main.cpp`) and the mock controller
+The ESP32 firmware (`firmware/src/http_api.cpp`) and the mock controller
 (`tools/mock-device.cjs`) both implement this contract. The browser talks to
 it through `web/js/device.js`. The tests in `tools/test/mock-device.test.cjs`
 check it.
@@ -8,7 +8,7 @@ check it.
 - Transport: HTTP/1.1 on TCP port 80, JSON bodies (`Content-Type: application/json`)
 - Address: `http://nather.local` (mDNS), the DHCP address, or `http://192.168.4.1` on the setup hotspot
 - Reads are open. Writes need `Authorization: Bearer <API_TOKEN>` when a token is set in `firmware/include/secrets.h`.
-- CORS is open (`Access-Control-Allow-Origin: *`), so a dashboard served from another host on the LAN can use the API.
+- Cross-origin access (CORS) is off unless a token is set. The website is served by the controller itself, so it never needs CORS. With a token, other origins are allowed, because every write must then carry the token.
 
 ## Endpoints
 
@@ -26,10 +26,11 @@ Room ids: `living`, `bedroom`, `kitchen`, `bathroom`, `hallway`, `garage`.
 
 ### Room rules
 
+- `brightness` must be a JSON number and `on` a JSON boolean; strings like `"40"` get `400`. A field sent as `null` counts as not sent.
 - `brightness` wins if both fields are sent. `0` means off, `1–100` means on.
 - `{"on": true}` restores the room's last non-zero brightness (50 % the first time).
 - Any write marks the room as manual (`auto: false`), so auto-off leaves it alone.
-- The UI always sends an absolute `brightness`. Repeating a request is harmless, and only the latest value matters.
+- The slider sends an absolute `brightness`, so only the latest value matters. The switch sends `{on}`, so the controller restores the last brightness.
 
 ### Auto and Manual mode
 
@@ -55,6 +56,7 @@ Every error is JSON: `{"error": "message"}`.
 ```json
 {
   "mode": "auto",
+  "rules": { "entryBrightness": 70, "autoOffSeconds": 300, "darkThreshold": 30 },
   "device": {
     "name": "nather",
     "hostname": "nather.local",
@@ -86,7 +88,8 @@ Every error is JSON: `{"error": "message"}`.
 ```
 
 - `device.mode`: `sta` on the home Wi-Fi, `ap` on the fallback hotspot (where `rssi` is `null`).
-- `hw`: `pwm` (dimmable LED), `relay` (on/off), or `none` (tracked but not wired). `pin` is the GPIO, or `-1`. The mock leaves `pin` out.
+- `rules`: the motion-lighting numbers, so the page can explain them without hard-coding them.
+- `hw`: `pwm` (dimmable LED), `relay` (on/off), or `none` (tracked but not wired). `pin` is the GPIO, or `-1`. The mock leaves out `pin` and `device.heap`.
 - `sensors.lastMotionAgo`: seconds since the last motion, `null` before the first one.
 - `sensors.light`: ambient light in %, `null` when no LDR is fitted. `dark` is `true` below the threshold, and always `true` without a sensor.
 

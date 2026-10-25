@@ -82,6 +82,16 @@ void motion_switches_entry_rooms_when_dark() {
   TEST_ASSERT_TRUE(l.snapshot(3000).rooms[kHallway].byMotion);
 }
 
+void dark_means_below_the_threshold() {
+  Lights l(record);
+  l.setEntryRooms(bit(kHallway));
+  l.onLight(config::kDarkThresholdPct);
+  TEST_ASSERT_EQUAL_UINT16(0, l.onMotion(true, 0));
+  l.onMotion(false, 0);
+  l.onLight(config::kDarkThresholdPct - 1);
+  TEST_ASSERT_EQUAL_UINT16(bit(kHallway), l.onMotion(true, 0));
+}
+
 void no_light_sensor_counts_as_dark() {
   Lights l(record);
   l.setEntryRooms(bit(kGarage));
@@ -182,6 +192,7 @@ int main() {
   RUN_TEST(switching_on_restores_last_brightness);
   RUN_TEST(unchanged_value_does_not_rewrite_the_output);
   RUN_TEST(motion_switches_entry_rooms_when_dark);
+  RUN_TEST(dark_means_below_the_threshold);
   RUN_TEST(no_light_sensor_counts_as_dark);
   RUN_TEST(motion_leaves_a_room_that_is_already_on);
   RUN_TEST(auto_off_switches_only_motion_lit_rooms);

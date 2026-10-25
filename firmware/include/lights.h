@@ -20,7 +20,7 @@ struct RoomState {
 
 struct Snapshot {
   std::array<RoomState, config::kRoomCount> rooms{};
-  uint16_t entryMask = 0;
+  config::RoomMask entryMask = 0;
   Mode mode = Mode::Auto;
   bool motion = false;
   bool sawMotion = false;
@@ -38,18 +38,18 @@ class Lights {
 
   Result setBrightness(uint8_t room, float pct);
   Result setOn(uint8_t room, bool on);
-  void setEntryRooms(uint16_t mask);
+  void setEntryRooms(config::RoomMask rooms);
   void setMode(Mode mode);
-  void restore(uint16_t entryMask, Mode mode);
+  void restore(config::RoomMask entryRooms, Mode mode);
 
-  // Return a bit mask of the rooms they switched, for logging.
-  uint16_t onMotion(bool active, uint32_t now);
-  uint16_t tick(uint32_t now);
+  // Return the rooms they switched, for logging.
+  config::RoomMask onMotion(bool active, uint32_t now);
+  config::RoomMask tick(uint32_t now);
 
   void onLight(int pct);
 
   Snapshot snapshot(uint32_t now) const;
-  uint16_t entryMask() const;
+  config::RoomMask entryMask() const;
   Mode mode() const;
 
   // True once after any change; the HTTP layer uses it to push state.
@@ -62,7 +62,7 @@ class Lights {
   mutable std::mutex mutex_;
   std::array<RoomState, config::kRoomCount> rooms_{};
   std::array<uint8_t, config::kRoomCount> lastBrightness_{};
-  uint16_t entryMask_ = 0;
+  config::RoomMask entryMask_ = 0;
   Mode mode_ = Mode::Auto;
   bool motion_ = false;
   bool sawMotion_ = false;

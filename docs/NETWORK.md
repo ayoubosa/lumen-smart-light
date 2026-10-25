@@ -20,7 +20,7 @@ flowchart LR
 
 Fallback when the home Wi-Fi is down (30 s with no network at boot, or 3
 minutes after a drop): the controller opens its own WPA2 hotspot
-`Nather-Setup` and scans for the home network every minute. It is the gateway and DHCP server at `192.168.4.1`,
+`Nather-Setup` and scans for the home network every 30 seconds. It is the gateway and DHCP server at `192.168.4.1`,
 so you can still control the lights directly from a phone.
 
 ## What happens when the board starts

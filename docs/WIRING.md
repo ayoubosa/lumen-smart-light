@@ -69,7 +69,7 @@ Serial log on a healthy boot:
 The website answers as soon as the board shows `online`. If it never does,
 the log shows a `disconnected, reason N` line per attempt. After 30 s the
 board opens the `Nather-Setup` hotspot at `http://192.168.4.1` and keeps
-looking for the home network every minute.
+looking for the home network every 30 seconds.
 
 Run the logic tests on your computer, no board needed:
 

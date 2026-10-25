@@ -7,29 +7,42 @@ constexpr uint32_t kBackoffMs[] = {1'000, 2'000, 5'000, 10'000, 20'000, 30'000, 
 constexpr uint8_t kBackoffSteps = sizeof(kBackoffMs) / sizeof(kBackoffMs[0]);
 }  // namespace
 
+Actions& Actions::operator|=(const Actions& o) {
+  if (o.connect) {
+    connect = true;
+    via = o.via;
+  }
+  forgetCachedAp |= o.forgetCachedAp;
+  saveCachedAp |= o.saveCachedAp;
+  openHotspot |= o.openHotspot;
+  closeHotspot |= o.closeHotspot;
+  startScan |= o.startScan;
+  restartMdns |= o.restartMdns;
+  return *this;
+}
+
 uint32_t Policy::backoffMs(uint8_t failures) {
   return kBackoffMs[failures < kBackoffSteps ? failures : kBackoffSteps - 1];
 }
 
-Actions Policy::attempt(uint32_t now, bool pinned, bool fromScan) {
+Actions Policy::attempt(uint32_t now, JoinVia via) {
   Actions a;
   a.connect = true;
-  a.usePin = pinned;
-  a.useScanResult = fromScan;
+  a.via = via;
   state_ = State::Connecting;
-  pinnedAttempt_ = pinned;
+  cachedAttempt_ = via == JoinVia::CachedAp;
   attemptStart_ = now;
   return a;
 }
 
-Actions Policy::start(uint32_t now, bool havePin) {
+Actions Policy::start(uint32_t now, bool haveCachedAp) {
   offlineSince_ = now;
-  return attempt(now, havePin, false);
+  return attempt(now, haveCachedAp ? JoinVia::CachedAp : JoinVia::Scan);
 }
 
 Actions Policy::gotIp(uint32_t now) {
   Actions a;
-  a.savePin = true;
+  a.saveCachedAp = true;
   a.restartMdns = everOnline_ || hotspotOn_;   // the first time, wifiBegin() has just started mDNS
   state_ = State::Online;
   everOnline_ = true;
@@ -40,10 +53,10 @@ Actions Policy::gotIp(uint32_t now) {
 
 Actions Policy::failAttempt(uint32_t now) {
   Actions a;
-  if (pinnedAttempt_) {
-    // The router may have changed channel or BSSID: forget the pin and scan normally, straight away.
-    a = attempt(now, false, false);
-    a.forgetPin = true;
+  if (cachedAttempt_) {
+    // The router may have changed channel or BSSID: forget it and scan normally, straight away.
+    a = attempt(now, JoinVia::Scan);
+    a.forgetCachedAp = true;
     return a;
   }
   state_ = State::Waiting;
@@ -57,7 +70,7 @@ Actions Policy::disconnected(uint32_t now) {
   if (state_ == State::Online) {
     offlineSince_ = now;
     failures_ = 0;
-    pinnedAttempt_ = false;
+    cachedAttempt_ = false;
     state_ = State::Connecting;   // fall through as a failed attempt so the backoff starts at 1 s
   }
   if (state_ != State::Connecting) return {};
@@ -67,7 +80,7 @@ Actions Policy::disconnected(uint32_t now) {
 Actions Policy::scanFinished(bool homeVisible, uint32_t now) {
   scanning_ = false;
   if (state_ != State::Waiting) return {};
-  if (homeVisible) return attempt(now, false, true);
+  if (homeVisible) return attempt(now, JoinVia::ScanResult);
   waitStart_ = now;
   waitMs_ = t_.scanEveryMs;
   return {};
@@ -76,10 +89,10 @@ Actions Policy::scanFinished(bool homeVisible, uint32_t now) {
 Actions Policy::tick(uint32_t now, uint8_t hotspotClients) {
   Actions a;
 
-  if (scanning_ && now - scanStart_ >= t_.scanTimeoutMs) a = scanFinished(false, now);
+  if (scanning_ && now - scanStart_ >= t_.scanTimeoutMs) a |= scanFinished(false, now);
 
   if (state_ == State::Connecting && now - attemptStart_ >= t_.attemptTimeoutMs) {
-    a = failAttempt(now);   // no event arrived: treat it as a failure
+    a |= failAttempt(now);   // no event arrived: treat it as a failure
   }
 
   if (state_ != State::Online && !hotspotOn_) {
@@ -103,8 +116,7 @@ Actions Policy::tick(uint32_t now, uint8_t hotspotClients) {
       scanStart_ = now;
       a.startScan = true;
     } else {
-      const Actions next = attempt(now, false, false);
-      a.connect = next.connect;
+      a |= attempt(now, JoinVia::Scan);
     }
   }
 

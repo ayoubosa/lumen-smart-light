@@ -60,6 +60,25 @@ test("motion turns entry rooms on when dark, and not when bright", () => {
   assert.equal(s.sensors.dark, true);
 });
 
+test("dark means below the threshold: 29% is dark, 30% is not", () => {
+  const e = createEngine();
+  e.setEntryRooms(["hallway"]);
+  e.setLight(30);
+  assert.deepEqual(e.setMotion(true), []);
+  e.setMotion(false);
+  e.setLight(29);
+  assert.deepEqual(e.setMotion(true), ["hallway"]);
+});
+
+test("only real numbers and booleans are accepted", () => {
+  const e = createEngine();
+  assert.throws(() => e.setRoom("living", { brightness: "40" }), { status: 400 });
+  assert.throws(() => e.setRoom("living", { brightness: true }), { status: 400 });
+  assert.throws(() => e.setRoom("living", { on: 1 }), { status: 400 });
+  assert.throws(() => e.setRoom("living", []), { status: 400 });
+  assert.equal(e.setRoom("living", { brightness: null, on: true }).on, true);
+});
+
 test("no light sensor means it always counts as dark", () => {
   const e = createEngine();
   e.setEntryRooms(["garage"]);
@@ -167,6 +186,13 @@ test("load restores saved rooms and ignores unknown ids", () => {
   assert.equal(s.rooms.living.brightness, 65);
   assert.deepEqual(s.entryRooms, ["living"]);
   assert.equal(s.mode, "manual");
+});
+
+test("a restored room switches back on at its saved brightness", () => {
+  const e = createEngine();
+  e.load({ rooms: { living: { on: true, brightness: 65 } } });
+  e.setRoom("living", { on: false });
+  assert.equal(e.setRoom("living", { on: true }).brightness, 65);
 });
 
 test("applyPatch is usable on its own for optimistic UI updates", () => {

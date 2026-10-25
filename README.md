@@ -6,9 +6,10 @@ Wi-Fi lighting controller for a home: an ESP32 drives a dimmable LED and two
 relays, a PIR sensor switches lights on when someone walks in after dark, and
 a web app controls every room live from any phone or laptop on the network.
 
-**[Live demo](https://ayoubosa.github.io/nather-smart-light/)** runs a
-simulated controller in your browser. On the real board the same pages are
-served by the ESP32 at `http://nather.local`.
+On the real board the pages are served by the ESP32 at `http://nather.local`.
+Without a board, `npm start` runs the same site against a mock controller,
+and any copy of the site with no controller behind it falls back to a
+simulated controller in the browser.
 
 ## What it does
 
@@ -92,8 +93,9 @@ docs/           API, network, wiring and design notes
 
 ## Background
 
-The hardware started as a graduation project in electronics engineering: a
-PIR-triggered smart light on an ESP32. It was built on a model house, then
+The hardware and the first app are the graduation project of two
+electronics engineering students (credited here by name once they confirm
+how they would like to be named): a PIR-triggered smart light on an ESP32. It was built on a model house, then
 tested in several rooms at the university with a dimmable LED, the PIR
 motion sensor and an LDR light sensor. This repository turns it into a full
 networked system: firmware with a documented API, a live web app, a mock

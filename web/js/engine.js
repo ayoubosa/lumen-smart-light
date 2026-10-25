@@ -2,7 +2,7 @@
    NATHER STATE ENGINE
    The lighting rules in one place. Used by the browser demo mode
    (js/device.js) and by the mock controller (tools/mock-device.cjs).
-   The ESP32 firmware applies the same rules in C++ (firmware/src/main.cpp),
+   The ESP32 firmware applies the same rules in C++ (firmware/src/lights.cpp),
    so if a rule changes here, change it there too.
    ════════════════════════════════════ */
 (function (root, factory) {
@@ -36,22 +36,23 @@
   }
 
   function clampBrightness(v) {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return null;
-    return Math.max(0, Math.min(100, Math.round(n)));
+    if (typeof v !== "number" || !Number.isFinite(v)) return null;
+    return Math.max(0, Math.min(100, Math.round(v)));
   }
+
+  const present = v => v !== undefined && v !== null;   // JSON null counts as "not sent", as in the firmware
 
   /* Pure rule: apply a {on} or {brightness} patch to one room.
      brightness wins over on; brightness 0 means off; switching on restores
      the last non-zero brightness. */
   function applyPatch(room, patch, defaultOnBrightness) {
-    if (!patch || typeof patch !== "object") throw httpError(400, "Body must be a JSON object");
-    if (patch.brightness !== undefined) {
+    if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw httpError(400, "Body must be a JSON object");
+    if (present(patch.brightness)) {
       const b = clampBrightness(patch.brightness);
       if (b === null) throw httpError(400, "brightness must be a number from 0 to 100");
       room.brightness = b;
       room.on = b > 0;
-    } else if (patch.on !== undefined) {
+    } else if (present(patch.on)) {
       if (typeof patch.on !== "boolean") throw httpError(400, "on must be true or false");
       room.on = patch.on;
       room.brightness = patch.on ? (room.brightness || room.last || defaultOnBrightness || 50) : 0;
@@ -64,7 +65,9 @@
   }
 
   function createEngine(options) {
-    const cfg = Object.assign({}, DEFAULTS, options || {});
+    // options left undefined keep their default (Object.assign would copy the undefined)
+    const given = Object.fromEntries(Object.entries(options || {}).filter(([, v]) => v !== undefined));
+    const cfg = Object.assign({}, DEFAULTS, given);
     cfg.hardware = Object.assign({}, DEFAULTS.hardware, (options && options.hardware) || {});
     const now = cfg.now || (() => Date.now());
     const listeners = new Set();
@@ -97,7 +100,13 @@
     }
 
     function snapshot() {
-      const out = { mode, rooms: {}, entryRooms: entryRooms.slice(), sensors: {} };
+      const out = {
+        mode,
+        rules: { entryBrightness: cfg.entryBrightness, autoOffSeconds: cfg.autoOffSeconds, darkThreshold: cfg.darkThreshold },
+        rooms: {},
+        entryRooms: entryRooms.slice(),
+        sensors: {}
+      };
       ROOM_IDS.forEach(id => { out.rooms[id] = roomSnapshot(id); });
       out.sensors = {
         motion: sensors.motion,
@@ -164,7 +173,7 @@
     }
 
     function setLight(percent) {
-      const v = percent === null ? null : clampBrightness(percent);
+      const v = percent === null ? null : clampBrightness(Number(percent));
       sensors.light = v;
       emit("light");
     }
@@ -195,7 +204,7 @@
         ROOM_IDS.forEach(id => {
           const s = saved.rooms[id];
           if (!s) return;
-          const b = clampBrightness(s.on ? s.brightness : 0);
+          const b = clampBrightness(s.on ? Number(s.brightness) : 0);
           rooms[id].brightness = b || 0;
           rooms[id].on = rooms[id].brightness > 0;
           if (rooms[id].brightness > 0) rooms[id].last = rooms[id].brightness;
@@ -210,8 +219,8 @@
       return () => listeners.delete(fn);
     }
 
-    return { snapshot, setRoom, setEntryRooms, setMode, setMotion, setLight, tick, load, onChange, config: cfg };
+    return { snapshot, setRoom, setEntryRooms, setMode, setMotion, setLight, tick, load, onChange };
   }
 
-  return { ROOM_IDS, DEFAULTS, applyPatch, clampBrightness, createEngine };
+  return { ROOM_IDS, DEFAULTS, applyPatch, createEngine };
 });

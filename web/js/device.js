@@ -28,9 +28,16 @@
   let engine = null;
   let lastRtt = null;
   let lastError = null;
-  const sendQueue = {};      // room id -> { inflight, dirty }
+  const sendQueue = {};      // room id -> { inflight, next: patch waiting to be sent }
+  const lastLevel = {};      // room id -> last non-zero brightness seen, for optimistic "on"
+
+  function rememberLevels() {
+    if (!state || !state.rooms) return;
+    Object.entries(state.rooms).forEach(([id, r]) => { if (r.brightness > 0) lastLevel[id] = r.brightness; });
+  }
 
   function emit() {
+    rememberLevels();
     listeners.forEach(fn => { try { fn(state); } catch (e) { console.error(e); } });
   }
 
@@ -114,7 +121,7 @@
         // keep optimistic values for rooms that still have writes in flight
         Object.keys(sendQueue).forEach(id => {
           const q = sendQueue[id];
-          if ((q.inflight || q.dirty) && state.rooms[id]) next.rooms[id] = state.rooms[id];
+          if ((q.inflight || q.next) && state.rooms[id]) next.rooms[id] = state.rooms[id];
         });
         state = next;
         link = "online";
@@ -126,18 +133,19 @@
     es.onerror = () => { link = "offline"; emit(); }; // EventSource retries by itself
   }
 
-  /* Send the room's absolute brightness. Absolute values make writes
-     idempotent, so while one request is in flight we only remember that
-     another is needed and send the latest value when it returns. */
-  function queueRoomSend(id) {
-    const q = sendQueue[id] || (sendQueue[id] = { inflight: false, dirty: false });
-    if (q.inflight) { q.dirty = true; return; }
+  /* One request per room in flight. A newer patch replaces the waiting one:
+     slider moves are absolute brightness, so only the latest matters, and a
+     switch is sent as {on} so the controller restores the last brightness. */
+  function queueRoomSend(id, patch) {
+    const q = sendQueue[id] || (sendQueue[id] = { inflight: false, next: null });
+    q.next = patch;
+    if (q.inflight) return;
     q.inflight = true;
-    q.dirty = false;
-    const brightness = state.rooms[id].brightness;
-    withAuth(() => request("PUT", "api/rooms/" + encodeURIComponent(id), { brightness }))
+    const body = q.next;
+    q.next = null;
+    withAuth(() => request("PUT", "api/rooms/" + encodeURIComponent(id), body))
       .then(room => {
-        if (!q.dirty && room) Object.assign(state.rooms[id], room);
+        if (!q.next && room) Object.assign(state.rooms[id], room);
         link = "online";
         lastError = null;
       })
@@ -148,7 +156,7 @@
       })
       .finally(() => {
         q.inflight = false;
-        if (q.dirty) queueRoomSend(id);
+        if (q.next) queueRoomSend(id, q.next);
         else emit();
       });
   }
@@ -242,9 +250,12 @@
     }
     const room = state.rooms[id];
     if (!room) return;
-    window.NatherEngine.applyPatch(room, patch, 50);
+    room.last = lastLevel[id];
+    try {
+      window.NatherEngine.applyPatch(room, patch, window.NatherEngine.DEFAULTS.defaultOnBrightness);
+    } catch (e) { console.warn(e.message); return; }
     emit();
-    queueRoomSend(id);
+    queueRoomSend(id, "brightness" in patch ? { brightness: room.brightness } : { on: patch.on });
   }
 
   function setEntryRooms(list) {
@@ -258,8 +269,7 @@
 
   function setMode(next) {
     if (mode === "demo") { engine.setMode(next); return; }
-    state.mode = next;
-    if (next === "manual") Object.values(state.rooms).forEach(r => { r.auto = false; });
+    state.mode = next;   // the controller pushes the rooms it changed
     emit();
     withAuth(() => request("PUT", "api/mode", { mode: next }))
       .then(res => { state.mode = res.mode; lastError = null; emit(); })
@@ -420,6 +430,8 @@
     form.append(label, input, btn);
     form.addEventListener("submit", (e) => { e.preventDefault(); if (input.value.trim()) connectTo(input.value); });
     panel.appendChild(form);
+    panel.appendChild(el("p", "conn-note",
+      "This works only when the controller has an API token set in secrets.h. Otherwise open http://nather.local directly."));
   }
 
   function togglePanel() {

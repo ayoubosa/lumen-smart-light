@@ -25,8 +25,9 @@ only the latest value is sent next (`queueRoomSend` in `web/js/device.js`).
 
 **One rules engine in JS, mirrored once in C++.**
 `web/js/engine.js` runs the browser demo and the mock controller, and the
-unit tests cover it. The firmware re-implements the same rules (`applyPatch`,
-`onMotion`, `checkAutoOff`), with comments pointing back to the JS
+unit tests cover it. The firmware re-implements the same rules in
+`firmware/src/lights.cpp` (`setBrightness`/`setOn`, `onMotion`, `tick`), with
+its own host tests (`firmware/test/test_lights`) and a pointer back to the JS
 version. Two implementations of about 60 lines is a smaller risk than putting
 a JS runtime on the board.
 
@@ -67,7 +68,7 @@ reboot never opens the hotspot.
 
 **With the hotspot up, scan first and join only when home is visible.**
 A blind connect attempt makes the radio hop channels and drops any phone
-using the hotspot. A short scan (100 ms per channel) every 60 s finds the
+using the hotspot. A short scan (100 ms per channel) every 30 s finds the
 router without kicking clients off. The hotspot opens on the router's last
 channel, so joining it later needs no channel change. It closes once the
 board has been back online for 60 s with nobody connected, or after 10
@@ -84,6 +85,12 @@ Modem sleep delays every reply noticeably. The board is mains-powered.
 Dragging the dial produces many changes per second. 100 ms is below what a
 person notices and stops the board from sending one event per pixel. The
 heartbeat refreshes uptime and RSSI and lets a client notice a dead link.
+
+**No cross-origin access unless a token is set.**
+With open CORS and no token, any web page open in a browser on the LAN
+could send `PUT` requests and switch the lights. The site is served by the
+controller itself, so it never needs CORS. Setting a token turns CORS on,
+because every write must then prove it.
 
 **Optional bearer token, plain HTTP.**
 TLS on the ESP32 would need a certificate that browsers trust for a LAN

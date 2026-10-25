@@ -49,12 +49,17 @@ inline constexpr Room kRooms[] = {
 constexpr uint8_t kRoomCount = sizeof(kRooms) / sizeof(kRooms[0]);
 static_assert(kRoomCount <= 16, "entry rooms are stored as a 16-bit mask");
 
+// A set of rooms, one bit per room index.
+using RoomMask = uint16_t;
+constexpr RoomMask roomBit(uint8_t room) { return RoomMask(1u << room); }
+constexpr RoomMask kAllRooms = RoomMask((1u << kRoomCount) - 1);
+
 // Wi-Fi (retry backoff: 1, 2, 5, 10, 20, 30 s, then every 60 s; see wifi_policy.cpp)
 constexpr const char* kHotspotSsid = "Nather-Setup";
 constexpr uint32_t kWifiAttemptTimeoutMs = 15'000;
 constexpr uint32_t kHotspotAfterBootMs = 30'000;   // never connected since power-on
 constexpr uint32_t kHotspotAfterDropMs = 180'000;  // was online; most router reboots finish inside this
-constexpr uint32_t kHotspotScanMs = 60'000;        // while the hotspot is up, look for home this often
+constexpr uint32_t kHotspotScanMs = 30'000;        // while the hotspot is up, look for home this often
 constexpr uint32_t kScanTimeoutMs = 10'000;        // a scan that never reports back counts as "not found"
 constexpr uint32_t kHotspotCloseAfterMs = 60'000;  // back online this long and nobody on the hotspot
 constexpr uint32_t kHotspotCloseMaxMs = 600'000;   // close it after this long regardless
