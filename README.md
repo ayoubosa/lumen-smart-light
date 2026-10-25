@@ -1,6 +1,6 @@
 # Lumen — ESP32 smart lighting
 
-[![CI](https://github.com/ayoubosa/nather-smart-light/actions/workflows/ci.yml/badge.svg)](https://github.com/ayoubosa/nather-smart-light/actions/workflows/ci.yml)
+[![CI](https://github.com/ayoubosa/lumen-smart-light/actions/workflows/ci.yml/badge.svg)](https://github.com/ayoubosa/lumen-smart-light/actions/workflows/ci.yml)
 
 Wi-Fi lighting controller for a home: an ESP32 drives a dimmable LED and two
 relays, a PIR sensor switches lights on when someone walks in after dark, and
