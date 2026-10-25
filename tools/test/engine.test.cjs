@@ -99,6 +99,19 @@ test("touching a motion-lit room makes it manual, so auto-off leaves it", () => 
   assert.deepEqual(e.tick(), []);
 });
 
+test("auto-off counts from when movement stopped, not when it started", () => {
+  const now = clock();
+  const e = createEngine({ autoOffSeconds: 60, now });
+  e.setEntryRooms(["hallway"]);
+  e.setMotion(true);
+  now.advance(120000);           // someone kept moving for two minutes
+  e.setMotion(false);
+  now.advance(1000);
+  assert.deepEqual(e.tick(), []);
+  now.advance(60000);
+  assert.deepEqual(e.tick(), ["hallway"]);
+});
+
 test("auto-off waits while motion is still active", () => {
   const now = clock();
   const e = createEngine({ autoOffSeconds: 60, now });

@@ -141,8 +141,8 @@
     function setMotion(active) {
       active = !!active;
       const turnedOn = [];
+      sensors.lastMotionAt = now();   // on both edges: auto-off counts from when movement stopped
       if (active) {
-        sensors.lastMotionAt = now();
         if (mode === "auto" && isDark()) {
           entryRooms.forEach(id => {
             const r = rooms[id];

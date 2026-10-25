@@ -1,53 +1,44 @@
 #pragma once
-// ─────────────────────────────────────────────────────────────
-//  Nather controller — hardware and behaviour settings.
-//  Match the pin map to how your board is wired (docs/WIRING.md).
-//  The browser demo uses the same defaults (web/js/engine.js).
-// ─────────────────────────────────────────────────────────────
+// Board wiring and behaviour. Pins follow docs/WIRING.md; the browser demo
+// uses the same behaviour numbers (web/js/engine.js).
+//
+// Plain C++ only: this header is also compiled by the host unit tests.
 
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
-#define FIRMWARE_VERSION "1.0.0"
+namespace config {
 
-// The board answers as http://nather.local (mDNS) and uses this
-// name as its DHCP hostname, so it shows up by name in the router.
-#define DEVICE_HOSTNAME "nather"
+constexpr const char* kFirmwareVersion = "1.1.0";
+constexpr const char* kHostname = "nather";        // http://nather.local and the DHCP name
 
-// ── Sensors ──────────────────────────────────────────────────
-// HC-SR501 PIR output. It drives 3.3 V, so it connects straight to a GPIO.
-#define PIR_PIN 27
-// The HC-SR501 gives false triggers for up to ~60 s after power-on.
-#define PIR_WARMUP_MS 30000
+// Sensors
+constexpr int kPirPin = 27;
+constexpr uint32_t kPirWarmupMs = 30'000;          // HC-SR501 false-triggers while it settles
+constexpr int kLdrPin = 34;                        // ADC1 only (ADC2 is unusable with Wi-Fi on); -1 = not fitted
+constexpr int kDarkThresholdPct = 30;
+constexpr uint32_t kLdrPeriodMs = 1'000;
 
-// LDR + 10 kΩ divider. Must be an ADC1 pin (GPIO 32–39): ADC2 cannot be
-// read while Wi-Fi is on. Set to -1 if no light sensor is fitted.
-#define LDR_PIN 34
-// Ambient light % below which motion is allowed to switch lights on.
-#define DARK_THRESHOLD 30
-#define LDR_READ_MS 1000
+// Lighting rules
+constexpr uint8_t kDefaultOnBrightness = 50;
+constexpr uint8_t kEntryBrightness = 70;
+constexpr uint32_t kAutoOffMs = 5 * 60'000;        // 0 disables auto-off
 
-// ── Behaviour ────────────────────────────────────────────────
-#define DEFAULT_ON_BRIGHTNESS 50   // first switch-on of a room
-#define ENTRY_BRIGHTNESS 70        // rooms switched on by motion
-#define AUTO_OFF_SECONDS 300       // motion-lit rooms go off after 5 min of stillness; 0 = never
-
-// ── Outputs ──────────────────────────────────────────────────
-// 5 kHz is above visible flicker and within what LED MOSFET drivers handle well.
-#define PWM_FREQ_HZ 5000
-#define PWM_BITS 8
-// Common blue relay boards switch ON when IN is pulled LOW.
-#define RELAY_ACTIVE_LOW true
+// Outputs
+constexpr uint32_t kPwmFrequencyHz = 5'000;
+constexpr uint8_t kPwmResolutionBits = 8;
+constexpr bool kRelayActiveLow = true;
 
 enum class Hw : uint8_t { None, Pwm, Relay };
 
-struct RoomConfig {
+struct Room {
   const char* id;
   Hw hw;
-  int8_t pin;   // -1 = no hardware, state is still tracked
+  int8_t pin;                                      // -1: tracked but not wired
 };
 
-// Reference board: one dimmable LED and a 2-channel relay module.
-static const RoomConfig ROOMS[] = {
+// Reference board: one dimmable LED and a two-channel relay module.
+inline constexpr Room kRooms[] = {
   {"living",   Hw::Pwm,   25},
   {"bedroom",  Hw::Relay, 26},
   {"kitchen",  Hw::Relay, 33},
@@ -55,13 +46,24 @@ static const RoomConfig ROOMS[] = {
   {"hallway",  Hw::None,  -1},
   {"garage",   Hw::None,  -1},
 };
-static const uint8_t ROOM_COUNT = sizeof(ROOMS) / sizeof(ROOMS[0]);
+constexpr uint8_t kRoomCount = sizeof(kRooms) / sizeof(kRooms[0]);
+static_assert(kRoomCount <= 16, "entry rooms are stored as a 16-bit mask");
 
-// ── Network ──────────────────────────────────────────────────
-#define WIFI_CONNECT_TIMEOUT_MS 15000
-// If the home Wi-Fi cannot be joined, the board opens its own hotspot
-// so it is still reachable at http://192.168.4.1
-#define AP_SSID "Nather-Setup"
-#define STATE_PUSH_MIN_MS 100      // coalesce bursts (e.g. dragging the dial)
-#define HEARTBEAT_MS 10000         // push state even when nothing changed
-#define MAX_BODY_BYTES 512
+// Wi-Fi (retry backoff: 1, 2, 5, 10, 20, 30 s, then every 60 s; see wifi_policy.cpp)
+constexpr const char* kHotspotSsid = "Nather-Setup";
+constexpr uint32_t kWifiAttemptTimeoutMs = 15'000;
+constexpr uint32_t kHotspotAfterBootMs = 30'000;   // never connected since power-on
+constexpr uint32_t kHotspotAfterDropMs = 180'000;  // was online; most router reboots finish inside this
+constexpr uint32_t kHotspotScanMs = 60'000;        // while the hotspot is up, look for home this often
+constexpr uint32_t kScanTimeoutMs = 10'000;        // a scan that never reports back counts as "not found"
+constexpr uint32_t kHotspotCloseAfterMs = 60'000;  // back online this long and nobody on the hotspot
+constexpr uint32_t kHotspotCloseMaxMs = 600'000;   // close it after this long regardless
+
+// HTTP
+constexpr uint16_t kHttpPort = 80;
+constexpr uint32_t kPushMinIntervalMs = 100;       // merge bursts, e.g. dragging a slider
+constexpr uint32_t kHeartbeatMs = 10'000;
+constexpr uint32_t kSseRetryMs = 2'000;
+constexpr size_t kMaxBodyBytes = 512;
+
+}  // namespace config

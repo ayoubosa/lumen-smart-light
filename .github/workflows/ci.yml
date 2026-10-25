@@ -17,7 +17,7 @@ jobs:
       - run: npm test
 
   firmware:
-    name: ESP32 firmware build
+    name: ESP32 firmware tests + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +29,13 @@ jobs:
           path: ~/.platformio
           key: pio-${{ hashFiles('firmware/platformio.ini') }}
       - run: pip install platformio
-      # builds with secrets.example.h placeholders (secrets.h is git-ignored)
-      - run: pio run -d firmware
-      - run: pio run -d firmware -t buildfs
+      - name: Lighting and Wi-Fi logic tests (on the runner, no board needed)
+        run: pio test -d firmware -e native
+      - name: Build firmware
+        run: pio run -d firmware -e esp32dev
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DNATHER_CI   # use secrets.example.h; secrets.h is git-ignored
+      - name: Build website image
+        run: pio run -d firmware -e esp32dev -t buildfs
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DNATHER_CI
