@@ -2,6 +2,7 @@
   "name": "lumen-smart-light",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "ESP32 smart lighting: PIR + light sensor entry lighting, PWM/relay control, REST + Server-Sent Events over Wi-Fi.",
   "scripts": {
     "start": "node tools/mock-device.cjs",

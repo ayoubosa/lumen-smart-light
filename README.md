@@ -113,3 +113,5 @@ documentation.
 ---
 
 Made by Ayoub for Natheir and Muammar Khazala.
+
+Licensed under the [MIT License](LICENSE).
