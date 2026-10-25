@@ -6,7 +6,8 @@ Wi-Fi lighting controller for a home: an ESP32 drives a dimmable LED and two
 relays, a PIR sensor switches lights on when someone walks in after dark, and
 a web app controls every room live from any phone or laptop on the network.
 
-On the real board the pages are served by the ESP32 at `http://lumen.local`.
+**[Live demo](https://ayoubosa.github.io/lumen-smart-light/)** runs the same site with a simulated
+controller in your browser. On the real board the pages are served by the ESP32 at `http://lumen.local`.
 Without a board, `npm start` runs the same site against a mock controller,
 and any copy of the site with no controller behind it falls back to a
 simulated controller in the browser.
