@@ -60,9 +60,19 @@ pio device monitor       # serial log at 115200 baud: IP, mDNS name, motion, API
 Serial log on a healthy boot:
 
 ```text
-Nather controller 1.0.0
-[wifi] joining "HomeWiFi"......
-[wifi] connected  ip 192.168.1.50  mask 255.255.255.0  gateway 192.168.1.1  rssi -58 dBm  channel 6
-[mdns] http://nather.local
-[pir] warming up for 30 s
+[I][main.cpp] Nather controller 1.1.0
+[I][board.cpp] PIR warming up for 30 s
+[I][wifi_link.cpp] joining "HomeWiFi" on channel 6
+[I][wifi_link.cpp] online  ip 192.168.1.50  gateway 192.168.1.1  rssi -58 dBm  channel 6
+```
+
+The website answers as soon as the board shows `online`. If it never does,
+the log shows a `disconnected, reason N` line per attempt. After 30 s the
+board opens the `Nather-Setup` hotspot at `http://192.168.4.1` and keeps
+looking for the home network every minute.
+
+Run the logic tests on your computer, no board needed:
+
+```bash
+pio test -e native
 ```

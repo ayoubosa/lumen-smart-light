@@ -18,8 +18,9 @@ flowchart LR
   P -. "mDNS UDP :5353<br/>224.0.0.251" .-> ESP
 ```
 
-Fallback when the home Wi-Fi is down: the controller opens its own WPA2
-hotspot `Nather-Setup`. It is the gateway and DHCP server at `192.168.4.1`,
+Fallback when the home Wi-Fi is down (30 s with no network at boot, or 3
+minutes after a drop): the controller opens its own WPA2 hotspot
+`Nather-Setup` and scans for the home network every minute. It is the gateway and DHCP server at `192.168.4.1`,
 so you can still control the lights directly from a phone.
 
 ## What happens when the board starts
@@ -44,7 +45,8 @@ When a browser opens `http://nather.local`:
 
 - **DHCP reservation, not a static IP in firmware.** The router stays the single source of truth for addressing, and the firmware works on any network. Reserve the ESP32's MAC (shown in the connection panel and on the serial log) to a fixed address.
 - **mDNS name `nather.local`.** No DNS server needed. mDNS is link-local multicast, so it does **not** cross routers or VLANs (see below).
-- **Wi-Fi power saving off** (`WiFi.setSleep(false)`). Modem sleep adds 100–300 ms to every reply. The board runs on mains power, so latency matters more than milliwatts.
+- **Wi-Fi power saving off** (`WiFi.setSleep(false)`). Modem sleep delays every reply noticeably. The board runs on mains power, so latency matters more than milliwatts.
+- **Fast rejoin.** The board remembers the router's BSSID and channel, so it rejoins without scanning every channel. Retries back off from 1 s to 60 s. The logic is in `firmware/src/wifi_policy.cpp` and is unit-tested.
 
 ## Capturing it in Wireshark
 

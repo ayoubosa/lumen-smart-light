@@ -48,6 +48,7 @@ controller pushes the full state to every client after each change.
 ```bash
 npm start          # mock controller + website on http://localhost:8080
 npm test           # rules engine + HTTP contract tests (Node 20+)
+cd firmware && pio test -e native   # firmware lighting and Wi-Fi logic tests, no board needed
 ```
 
 Tick a room under *Motion lighting* and press **Simulate Motion**. Open a
@@ -83,6 +84,8 @@ web/            website (served by the ESP32, GitHub Pages and the mock)
   js/device.js    controller discovery, REST + SSE client, connection panel
   js/script.js    page behaviour
 firmware/       PlatformIO project for the ESP32
+  src/wifi_policy.cpp  when to join, retry, open and close the hotspot (unit-tested)
+  src/lights.cpp       the lighting rules (unit-tested, same as engine.js)
 tools/          mock controller and tests
 docs/           API, network, wiring and design notes
 ```

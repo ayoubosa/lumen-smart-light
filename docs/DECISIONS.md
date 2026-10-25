@@ -42,16 +42,43 @@ The router stays the single place where addresses are managed, and the same
 firmware runs on any network. A DHCP reservation gives a stable IP when one is
 needed (an ACL, a VLAN without mDNS).
 
-**Fallback hotspot, retried every 5 minutes.**
-After a power cut the router often boots after the ESP32. Without a fallback
-the board would be unreachable. With automatic reconnection always on, the
-ESP32 keeps scanning other channels, which disconnects phones from its
-hotspot. So the firmware turns auto-reconnect off in hotspot mode and retries
-the home network on a slow timer, then closes the hotspot as soon as the home
-network is back.
+**The firmware owns Wi-Fi reconnection (`wifi_policy.cpp`), not the core's auto-reconnect.**
+On arduino-esp32 2.x, auto-reconnect only retries for some disconnect
+reasons, so after certain router reboots the board stayed offline. On
+others it retried in a tight loop. A small state machine decides
+instead. It is plain C++ with no Arduino calls, so `pio test -e native`
+runs it through boots, router reboots, channel changes and long outages
+on the build machine.
+
+**Boot does not wait for Wi-Fi.**
+The web server and sensors start immediately. The first join uses the
+router's BSSID and channel saved from the last connection, which skips the
+channel scan. If that fails (the router changed channel), the saved values
+are dropped and a normal scan follows straight away.
+
+**Retry after 1, 2, 5, 10, 20, 30 s, then every 60 s.**
+Fast enough to recover within seconds of a router coming back, without
+flooding the air while it is off.
+
+**Hotspot only after 30 s with no network at boot, or 3 minutes after a drop.**
+After a power cut the router often boots after the ESP32, so the board
+needs a fallback. Most router reboots finish inside 3 minutes, so a normal
+reboot never opens the hotspot.
+
+**With the hotspot up, scan first and join only when home is visible.**
+A blind connect attempt makes the radio hop channels and drops any phone
+using the hotspot. A short scan (100 ms per channel) every 60 s finds the
+router without kicking clients off. The hotspot opens on the router's last
+channel, so joining it later needs no channel change. It closes once the
+board has been back online for 60 s with nobody connected, or after 10
+minutes regardless.
+
+**Wi-Fi events are queued, not handled in the callback.**
+The callback runs on the Wi-Fi task. It only queues the event, and all
+radio, mDNS and logging work happens on the loop task.
 
 **Wi-Fi modem sleep disabled.**
-Modem sleep adds 100–300 ms to replies. The board is mains-powered.
+Modem sleep delays every reply noticeably. The board is mains-powered.
 
 **State pushes are merged into one per 100 ms, with a heartbeat every 10 s.**
 Dragging the dial produces many changes per second. 100 ms is below what a
