@@ -14,4 +14,3 @@ firmware/include/secrets.h
 
 # local tooling
 node_modules/
-.claude/
