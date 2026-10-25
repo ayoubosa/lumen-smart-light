@@ -240,6 +240,28 @@ main { padding-bottom: 56px; }
 main > section { margin-top: 40px; }
 
 .intro { margin-top: 32px; display: grid; gap: 10px; }
+.intro-text { display: grid; gap: 10px; align-content: start; }
+
+/* Lights page: text left, the model house right; stacks on small screens */
+.intro-split {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.intro-photo { margin: 0; display: grid; gap: 8px; }
+.intro-photo img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.intro-photo figcaption { font-size: 0.85rem; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .intro-split { grid-template-columns: 1fr; gap: 18px; }
+  .intro-photo img { aspect-ratio: 16 / 9; }
+}
 .lead { color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
 
 .notice {
@@ -511,6 +533,8 @@ input[type="range"] {
 }
 .part h3 { margin-bottom: 4px; }
 .part p { color: var(--muted); font-size: 0.92rem; }
+
+.section-lead { margin-top: 6px; max-width: 65ch; }
 
 .photos {
   margin-top: 14px;

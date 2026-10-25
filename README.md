@@ -90,7 +90,9 @@ docs/           API, network, wiring and design notes
 ## Background
 
 The hardware started as a graduation project in electronics engineering: a
-PIR-triggered smart light on an ESP32. This repository turns it into a full
+PIR-triggered smart light on an ESP32. It was built on a model house, then
+tested in several rooms at the university with a dimmable LED, the PIR
+motion sensor and an LDR light sensor. This repository turns it into a full
 networked system: firmware with a documented API, a live web app, a mock
 for testing, and the network design and analysis around it.
 
