@@ -25,7 +25,7 @@ test("GET /api/state has device, rooms, entryRooms and sensors", async (t) => {
   const res = await fetch(d.base + "/api/state");
   assert.equal(res.status, 200);
   const s = await res.json();
-  assert.equal(s.device.hostname, "nather.local");
+  assert.equal(s.device.hostname, "lumen.local");
   assert.equal(s.device.simulated, true);
   assert.deepEqual(Object.keys(s.rooms), ["living", "bedroom", "kitchen", "bathroom", "hallway", "garage"]);
   assert.deepEqual(s.entryRooms, []);
@@ -130,7 +130,7 @@ test("serves the website and refuses path traversal", async (t) => {
   t.after(d.close);
   const res = await fetch(d.base + "/");
   assert.equal(res.status, 200);
-  assert.match(await res.text(), /<title>[^<]*Nather<\/title>/);
+  assert.match(await res.text(), /<title>[^<]*Lumen<\/title>/);
   assert.equal((await fetch(d.base + "/js/device.js")).status, 200);
   // one level up is the repo root, where package.json really exists
   assert.equal((await fetch(d.base + "/..%2fpackage.json")).status, 403);

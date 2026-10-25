@@ -43,7 +43,7 @@ wired differently, change it there. The UI picks the new map up from
 
 ## Calibrating the light sensor
 
-1. Flash the firmware and open `http://nather.local`. The *Motion lighting* section shows the light sensor reading in %.
+1. Flash the firmware and open `http://lumen.local`. The *Motion lighting* section shows the light sensor reading in %.
 2. Note the reading in normal daylight and with the room lights off at dusk.
 3. Set `DARK_THRESHOLD` in `config.h` between the two, and reflash.
 
@@ -60,7 +60,7 @@ pio device monitor       # serial log at 115200 baud: IP, mDNS name, motion, API
 Serial log on a healthy boot:
 
 ```text
-[I][main.cpp] Nather controller 1.1.0
+[I][main.cpp] Lumen controller 1.1.0
 [I][board.cpp] PIR warming up for 30 s
 [I][wifi_link.cpp] joining "HomeWiFi" on channel 6
 [I][wifi_link.cpp] online  ip 192.168.1.50  gateway 192.168.1.1  rssi -58 dBm  channel 6
@@ -68,7 +68,7 @@ Serial log on a healthy boot:
 
 The website answers as soon as the board shows `online`. If it never does,
 the log shows a `disconnected, reason N` line per attempt. After 30 s the
-board opens the `Nather-Setup` hotspot at `http://192.168.4.1` and keeps
+board opens the `Lumen-Setup` hotspot at `http://192.168.4.1` and keeps
 looking for the home network every 30 seconds.
 
 Run the logic tests on your computer, no board needed:

@@ -10,7 +10,7 @@
 namespace config {
 
 constexpr const char* kFirmwareVersion = "1.1.0";
-constexpr const char* kHostname = "nather";        // http://nather.local and the DHCP name
+constexpr const char* kHostname = "lumen";        // http://lumen.local and the DHCP name
 
 // Sensors
 constexpr int kPirPin = 27;
@@ -55,7 +55,7 @@ constexpr RoomMask roomBit(uint8_t room) { return RoomMask(1u << room); }
 constexpr RoomMask kAllRooms = RoomMask((1u << kRoomCount) - 1);
 
 // Wi-Fi (retry backoff: 1, 2, 5, 10, 20, 30 s, then every 60 s; see wifi_policy.cpp)
-constexpr const char* kHotspotSsid = "Nather-Setup";
+constexpr const char* kHotspotSsid = "Lumen-Setup";
 constexpr uint32_t kWifiAttemptTimeoutMs = 15'000;
 constexpr uint32_t kHotspotAfterBootMs = 30'000;   // never connected since power-on
 constexpr uint32_t kHotspotAfterDropMs = 180'000;  // was online; most router reboots finish inside this

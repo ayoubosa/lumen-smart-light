@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /* ════════════════════════════════════
-   NATHER MOCK CONTROLLER
+   LUMEN MOCK CONTROLLER
    Speaks the same HTTP API as the ESP32 firmware and serves the website,
    so the whole system can be run and tested without hardware.
 
      node tools/mock-device.cjs            → http://localhost:8080
-     PORT=9000 NATHER_TOKEN=secret node tools/mock-device.cjs
+     PORT=9000 LUMEN_TOKEN=secret node tools/mock-device.cjs
 
    Extra endpoints that only exist here (the real board has a real PIR):
      POST /api/sim/motion   {}              one motion pulse (3 s)
@@ -53,8 +53,8 @@ function createMockDevice(options) {
 
   function deviceInfo() {
     return {
-      name: "nather",
-      hostname: "nather.local",
+      name: "lumen",
+      hostname: "lumen.local",
       fw: "mock-1.0.0",
       mode: "sta",
       ip,
@@ -214,10 +214,10 @@ module.exports = { createMockDevice };
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 8080;
-  const { server } = createMockDevice({ token: process.env.NATHER_TOKEN || "" });
+  const { server } = createMockDevice({ token: process.env.LUMEN_TOKEN || "" });
   server.listen(port, () => {
-    console.log("Nather mock controller on http://localhost:" + port + "/");
+    console.log("Lumen mock controller on http://localhost:" + port + "/");
     console.log("API: GET /api/state, PUT /api/rooms/{id}, PUT /api/entry-rooms, PUT /api/mode, GET /api/events");
-    if (process.env.NATHER_TOKEN) console.log("Writes need: Authorization: Bearer <NATHER_TOKEN>");
+    if (process.env.LUMEN_TOKEN) console.log("Writes need: Authorization: Bearer <LUMEN_TOKEN>");
   });
 }

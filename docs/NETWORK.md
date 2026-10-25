@@ -1,6 +1,6 @@
 # Network design
 
-How the Nather controller lives on a home network, what goes over the wire,
+How the Lumen controller lives on a home network, what goes over the wire,
 and how to see it for yourself in Wireshark.
 
 ## Topology
@@ -9,7 +9,7 @@ and how to see it for yourself in Wireshark.
 flowchart LR
   subgraph LAN["Home LAN 192.168.1.0/24"]
     R["Router<br/>DHCP + gateway<br/>192.168.1.1"]
-    ESP["ESP32 controller<br/>nather.local<br/>192.168.1.50 (DHCP reservation)"]
+    ESP["ESP32 controller<br/>lumen.local<br/>192.168.1.50 (DHCP reservation)"]
     P["Phone / laptop<br/>browser"]
   end
   P -- "Wi-Fi 2.4 GHz" --- R
@@ -20,7 +20,7 @@ flowchart LR
 
 Fallback when the home Wi-Fi is down (30 s with no network at boot, or 3
 minutes after a drop): the controller opens its own WPA2 hotspot
-`Nather-Setup` and scans for the home network every 30 seconds. It is the gateway and DHCP server at `192.168.4.1`,
+`Lumen-Setup` and scans for the home network every 30 seconds. It is the gateway and DHCP server at `192.168.4.1`,
 so you can still control the lights directly from a phone.
 
 ## What happens when the board starts
@@ -28,14 +28,14 @@ so you can still control the lights directly from a phone.
 | Step | Protocol | Port | What to look for |
 |---|---|---|---|
 | 1. Join the Wi-Fi | 802.11 + WPA2 4-way handshake | – | ESP32 is 2.4 GHz only (802.11 b/g/n) |
-| 2. Get an address | DHCP (DORA) | UDP 67/68 | Option 12 hostname = `nather`, so it shows up by name in the router |
+| 2. Get an address | DHCP (DORA) | UDP 67/68 | Option 12 hostname = `lumen`, so it shows up by name in the router |
 | 3. Resolve the gateway | ARP | – | Who-has 192.168.1.1 |
-| 4. Announce itself | mDNS | UDP 5353 → 224.0.0.251 | A record `nather.local`, service `_http._tcp` |
+| 4. Announce itself | mDNS | UDP 5353 → 224.0.0.251 | A record `lumen.local`, service `_http._tcp` |
 | 5. Serve | HTTP/1.1 | TCP 80 | Pages from LittleFS, `/api/*` JSON |
 
-When a browser opens `http://nather.local`:
+When a browser opens `http://lumen.local`:
 
-1. The OS sends an mDNS query for `nather.local` to 224.0.0.251, and the ESP32 answers with its IP.
+1. The OS sends an mDNS query for `lumen.local` to 224.0.0.251, and the ESP32 answers with its IP.
 2. TCP three-way handshake to port 80, then `GET /` and the assets.
 3. `GET /api/state`: one JSON snapshot.
 4. `GET /api/events`: a long-lived response (`text/event-stream`). Every change and a 10-second heartbeat arrive on this one TCP connection.
@@ -44,7 +44,7 @@ When a browser opens `http://nather.local`:
 ## Addressing choices
 
 - **DHCP reservation, not a static IP in firmware.** The router stays the single source of truth for addressing, and the firmware works on any network. Reserve the ESP32's MAC (shown in the connection panel and on the serial log) to a fixed address.
-- **mDNS name `nather.local`.** No DNS server needed. mDNS is link-local multicast, so it does **not** cross routers or VLANs (see below).
+- **mDNS name `lumen.local`.** No DNS server needed. mDNS is link-local multicast, so it does **not** cross routers or VLANs (see below).
 - **Wi-Fi power saving off** (`WiFi.setSleep(false)`). Modem sleep delays every reply noticeably. The board runs on mains power, so latency matters more than milliwatts.
 - **Fast rejoin.** The board remembers the router's BSSID and channel, so it rejoins without scanning every channel. Retries back off from 1 s to 60 s. The logic is in `firmware/src/wifi_policy.cpp` and is unit-tested.
 
@@ -59,8 +59,8 @@ Display filters (replace the IP with your controller's):
 | Goal | Filter |
 |---|---|
 | Everything to/from the controller | `ip.addr == 192.168.1.50` |
-| Name resolution | `mdns && dns.qry.name == "nather.local"` |
-| Address assignment (capture while the board boots) | `dhcp && dhcp.option.hostname == "nather"` |
+| Name resolution | `mdns && dns.qry.name == "lumen.local"` |
+| Address assignment (capture while the board boots) | `dhcp && dhcp.option.hostname == "lumen"` |
 | Only API calls | `http.request.uri contains "/api/"` |
 | Only writes | `http.request.method == "PUT"` |
 | The live event stream | `http.content_type contains "event-stream"`, then *Follow → TCP Stream* |
@@ -110,7 +110,7 @@ ip dhcp pool IOT
  network 192.168.30.0 255.255.255.0
  default-router 192.168.30.1
 !
-ip dhcp pool NATHER
+ip dhcp pool LUMEN
  host 192.168.30.50 255.255.255.0
  client-identifier 01xx.xxxx.xxxx.xx   ! 01 + the controller's MAC
 !
@@ -124,7 +124,7 @@ ip access-list extended IOT-IN
 
 Consequences to plan for:
 
-- **mDNS stops working across VLANs.** `nather.local` will not resolve from VLAN 10. Either use the reserved IP, add a DNS record on the router, or enable an mDNS gateway/reflector (Cisco calls this the Service Discovery Gateway; many home routers call it an "mDNS repeater").
+- **mDNS stops working across VLANs.** `lumen.local` will not resolve from VLAN 10. Either use the reserved IP, add a DNS record on the router, or enable an mDNS gateway/reflector (Cisco calls this the Service Discovery Gateway; many home routers call it an "mDNS repeater").
 - **No internet for the controller.** It does not need any, and the browser still loads web fonts itself.
 - `established` matches TCP segments with ACK or RST set, so the long-lived SSE response is allowed while the controller still cannot open connections into the user VLAN.
 
@@ -135,8 +135,8 @@ Consequences to plan for:
 
 | Symptom | Check |
 |---|---|
-| `nather.local` does not resolve | Windows needs Bonjour or Windows 10+; Android before 12 has poor mDNS support, so use the IP. Different VLAN? See above. |
+| `lumen.local` does not resolve | Windows needs Bonjour or Windows 10+; Android before 12 has poor mDNS support, so use the IP. Different VLAN? See above. |
 | Page loads, badge says *Reconnecting…* | Something is closing the SSE connection: a proxy, a captive portal, or the board rebooting (watch the serial log). |
-| Board never joins Wi-Fi | 5 GHz-only network, wrong password, or MAC filtering. Join `Nather-Setup`, then fix `secrets.h` and reflash. |
+| Board never joins Wi-Fi | 5 GHz-only network, wrong password, or MAC filtering. Join `Lumen-Setup`, then fix `secrets.h` and reflash. |
 | Slow replies | Weak signal: check `rssi` in the connection panel. Below about −75 dBm, move the board or the access point. |
 | Works from laptop, not from phone | The phone is on a guest network with client isolation. |

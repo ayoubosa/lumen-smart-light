@@ -1,4 +1,4 @@
-# Nather — ESP32 smart lighting
+# Lumen — ESP32 smart lighting
 
 [![CI](https://github.com/ayoubosa/nather-smart-light/actions/workflows/ci.yml/badge.svg)](https://github.com/ayoubosa/nather-smart-light/actions/workflows/ci.yml)
 
@@ -6,7 +6,7 @@ Wi-Fi lighting controller for a home: an ESP32 drives a dimmable LED and two
 relays, a PIR sensor switches lights on when someone walks in after dark, and
 a web app controls every room live from any phone or laptop on the network.
 
-On the real board the pages are served by the ESP32 at `http://nather.local`.
+On the real board the pages are served by the ESP32 at `http://lumen.local`.
 Without a board, `npm start` runs the same site against a mock controller,
 and any copy of the site with no controller behind it falls back to a
 simulated controller in the browser.
@@ -63,7 +63,7 @@ Needs [PlatformIO](https://platformio.org/install/cli) and an ESP32 DevKit (WROO
 cd firmware
 cp include/secrets.example.h include/secrets.h   # Wi-Fi name, password, optional API token
 pio run -t upload && pio run -t uploadfs          # firmware, then the website
-pio device monitor                                # prints the IP and http://nather.local
+pio device monitor                                # prints the IP and http://lumen.local
 ```
 
 Wiring, pin choices and light-sensor calibration: [docs/WIRING.md](docs/WIRING.md).
@@ -93,13 +93,14 @@ docs/           API, network, wiring and design notes
 
 ## Background
 
-The hardware and the first app are the graduation project of two
-electronics engineering students (credited here by name once they confirm
-how they would like to be named): a PIR-triggered smart light on an ESP32. It was built on a model house, then
-tested in several rooms at the university with a dimmable LED, the PIR
-motion sensor and an LDR light sensor. This repository turns it into a full
-networked system: firmware with a documented API, a live web app, a mock
-for testing, and the network design and analysis around it.
+The electronics come from Natheir and Muammar Khazala's electronics
+engineering graduation project: a PIR-triggered smart light on an ESP32,
+built on a model house and tested in several rooms at the university with a
+dimmable LED, the PIR motion sensor and an LDR light sensor.
+
+All the software in this repository is written by Ayoub: the firmware and its
+API, the web app, the mock controller, the tests, and the network design and
+documentation.
 
 ## Roadmap
 
@@ -107,3 +108,7 @@ for testing, and the network design and analysis around it.
 - OTA firmware updates
 - Packet Tracer lab of the IoT VLAN design in `docs/NETWORK.md`
 - TLS via a reverse proxy on a Raspberry Pi
+
+---
+
+Made by Ayoub for Natheir and Muammar Khazala.

@@ -109,7 +109,7 @@ bool savedAuto = true;
 }  // namespace
 
 void settingsBegin(Lights& lights) {
-  prefs.begin("nather", false);
+  prefs.begin("lumen", false);
   savedEntryMask = prefs.getUShort("entry", 0);
   savedAuto = prefs.getBool("auto", true);
   lights.restore(savedEntryMask, savedAuto ? Mode::Auto : Mode::Manual);

@@ -5,7 +5,7 @@
    All reads and writes go through js/device.js.
    ════════════════════════════════════ */
 document.addEventListener("DOMContentLoaded", async () => {
-  const device = window.NatherDevice;
+  const device = window.LumenDevice;
   const roomList = document.getElementById("roomList");
   if (!device || !roomList) return;
 

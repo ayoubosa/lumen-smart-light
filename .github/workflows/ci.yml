@@ -34,8 +34,8 @@ jobs:
       - name: Build firmware
         run: pio run -d firmware -e esp32dev
         env:
-          PLATFORMIO_BUILD_FLAGS: -DNATHER_CI   # use secrets.example.h; secrets.h is git-ignored
+          PLATFORMIO_BUILD_FLAGS: -DLUMEN_CI   # use secrets.example.h; secrets.h is git-ignored
       - name: Build website image
         run: pio run -d firmware -e esp32dev -t buildfs
         env:
-          PLATFORMIO_BUILD_FLAGS: -DNATHER_CI
+          PLATFORMIO_BUILD_FLAGS: -DLUMEN_CI

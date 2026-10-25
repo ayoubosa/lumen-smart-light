@@ -1,5 +1,5 @@
 /* ════════════════════════════════════
-   NATHER STATE ENGINE
+   LUMEN STATE ENGINE
    The lighting rules in one place. Used by the browser demo mode
    (js/device.js) and by the mock controller (tools/mock-device.cjs).
    The ESP32 firmware applies the same rules in C++ (firmware/src/lights.cpp),
@@ -8,7 +8,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.NatherEngine = api;
+  else root.LumenEngine = api;
 })(typeof self !== "undefined" ? self : this, function () {
 
   const ROOM_IDS = ["living", "bedroom", "kitchen", "bathroom", "hallway", "garage"];

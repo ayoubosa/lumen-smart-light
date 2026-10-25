@@ -1,4 +1,4 @@
-// Nather controller: ESP32 firmware for the smart-light project.
+// Lumen controller: ESP32 firmware for the smart-light project.
 // See README.md for the hardware and docs/API.md for the HTTP contract.
 
 #include <Arduino.h>
@@ -17,7 +17,7 @@ static Lights lights(outputWrite);
 
 void setup() {
   Serial.begin(115200);
-  ESP_LOGI(kTag, "Nather controller %s", config::kFirmwareVersion);
+  ESP_LOGI(kTag, "Lumen controller %s", config::kFirmwareVersion);
 
   outputsBegin();
   sensorsBegin();

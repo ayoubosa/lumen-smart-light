@@ -6,7 +6,7 @@ it through `web/js/device.js`. The tests in `tools/test/mock-device.test.cjs`
 check it.
 
 - Transport: HTTP/1.1 on TCP port 80, JSON bodies (`Content-Type: application/json`)
-- Address: `http://nather.local` (mDNS), the DHCP address, or `http://192.168.4.1` on the setup hotspot
+- Address: `http://lumen.local` (mDNS), the DHCP address, or `http://192.168.4.1` on the setup hotspot
 - Reads are open. Writes need `Authorization: Bearer <API_TOKEN>` when a token is set in `firmware/include/secrets.h`.
 - Cross-origin access (CORS) is off unless a token is set. The website is served by the controller itself, so it never needs CORS. With a token, other origins are allowed, because every write must then carry the token.
 
@@ -58,8 +58,8 @@ Every error is JSON: `{"error": "message"}`.
   "mode": "auto",
   "rules": { "entryBrightness": 70, "autoOffSeconds": 300, "darkThreshold": 30 },
   "device": {
-    "name": "nather",
-    "hostname": "nather.local",
+    "name": "lumen",
+    "hostname": "lumen.local",
     "fw": "1.0.0",
     "mode": "sta",
     "ip": "192.168.1.50",
@@ -115,10 +115,10 @@ Writes still go through `PUT`, and SSE only carries data from the controller to 
 ## Try it with curl
 
 ```bash
-curl http://nather.local/api/state
-curl -X PUT -H "Content-Type: application/json" -d '{"brightness":40}' http://nather.local/api/rooms/living
-curl -X PUT -H "Content-Type: application/json" -d '{"rooms":["hallway"]}' http://nather.local/api/entry-rooms
-curl -N http://nather.local/api/events
+curl http://lumen.local/api/state
+curl -X PUT -H "Content-Type: application/json" -d '{"brightness":40}' http://lumen.local/api/rooms/living
+curl -X PUT -H "Content-Type: application/json" -d '{"rooms":["hallway"]}' http://lumen.local/api/entry-rooms
+curl -N http://lumen.local/api/events
 ```
 
 With a token: add `-H "Authorization: Bearer <token>"` to the writes.

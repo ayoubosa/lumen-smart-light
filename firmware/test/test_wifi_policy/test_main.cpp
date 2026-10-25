@@ -187,7 +187,7 @@ void router_back_is_joined_from_the_scan_result() {
   const Actions join = p.scanFinished(true, now);
   TEST_ASSERT_TRUE(join.connect);
   TEST_ASSERT_TRUE(join.via == JoinVia::ScanResult);
-  TEST_ASSERT_TRUE(p.gotIp(now).restartMdns);   // announce nather.local on the home network again
+  TEST_ASSERT_TRUE(p.gotIp(now).restartMdns);   // announce lumen.local on the home network again
 }
 
 void hotspot_stays_while_a_phone_uses_it() {

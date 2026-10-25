@@ -38,7 +38,7 @@ a real output.
 
 ## Network
 
-**DHCP + mDNS (`nather.local`), no static IP in firmware.**
+**DHCP + mDNS (`lumen.local`), no static IP in firmware.**
 The router stays the single place where addresses are managed, and the same
 firmware runs on any network. A DHCP reservation gives a stable IP when one is
 needed (an ACL, a VLAN without mDNS).

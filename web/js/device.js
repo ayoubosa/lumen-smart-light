@@ -1,5 +1,5 @@
 /* ════════════════════════════════════
-   NATHER DEVICE LINK
+   LUMEN DEVICE LINK
    Finds the ESP32 controller and keeps the page in sync with it.
 
    device mode — the page talks to a controller over HTTP:
@@ -14,9 +14,9 @@
    See docs/API.md for the full contract.
    ════════════════════════════════════ */
 (function () {
-  const DEVICE_KEY = "nather_device_url";
-  const TOKEN_KEY = "nather_api_token";
-  const DEMO_KEY = "nather_demo_state";
+  const DEVICE_KEY = "lumen_device_url";
+  const TOKEN_KEY = "lumen_api_token";
+  const DEMO_KEY = "lumen_demo_state";
   const PROBE_TIMEOUT_MS = 2500;
   const DEMO_TICK_MS = 5000;
 
@@ -173,12 +173,7 @@
 
   function readDemoState() {
     try {
-      const saved = JSON.parse(storageGet(DEMO_KEY));
-      if (saved) return saved;
-      // carry over state saved by the first version of the site
-      const oldRooms = JSON.parse(storageGet("nather_rooms"));
-      const oldEntry = JSON.parse(storageGet("nather_entry_rooms"));
-      if (oldRooms || oldEntry) return { rooms: oldRooms || {}, entryRooms: oldEntry || [] };
+      return JSON.parse(storageGet(DEMO_KEY));
     } catch { /* corrupt storage: start fresh */ }
     return null;
   }
@@ -186,7 +181,7 @@
   function demoSnapshot() {
     const snap = engine.snapshot();
     snap.device = {
-      name: "nather-demo",
+      name: "lumen-demo",
       hostname: "in-browser simulation",
       fw: "demo",
       mode: "demo",
@@ -204,7 +199,7 @@
   function startDemo() {
     mode = "demo";
     link = "demo";
-    engine = window.NatherEngine.createEngine();
+    engine = window.LumenEngine.createEngine();
     engine.load(readDemoState());
     engine.onChange(() => {
       state = demoSnapshot();
@@ -252,7 +247,7 @@
     if (!room) return;
     room.last = lastLevel[id];
     try {
-      window.NatherEngine.applyPatch(room, patch, window.NatherEngine.DEFAULTS.defaultOnBrightness);
+      window.LumenEngine.applyPatch(room, patch, window.LumenEngine.DEFAULTS.defaultOnBrightness);
     } catch (e) { console.warn(e.message); return; }
     emit();
     queueRoomSend(id, "brightness" in patch ? { brightness: room.brightness } : { on: patch.on });
@@ -405,9 +400,9 @@
     if (location.protocol === "https:") {
       panel.appendChild(el("p", "conn-note",
         "Browsers block an HTTPS page from calling a plain-HTTP device. Open the controller's own page on your network instead:"));
-      const a = el("a", "conn-btn", "Open nather.local");
+      const a = el("a", "conn-btn", "Open lumen.local");
       a.setAttribute("translate", "no");
-      a.href = "http://nather.local/";
+      a.href = "http://lumen.local/";
       panel.appendChild(a);
       return;
     }
@@ -416,7 +411,7 @@
     const label = el("label", "conn-k", "Controller address");
     const input = el("input", "conn-input");
     input.type = "text";
-    input.placeholder = "nather.local or 192.168.1.50…";
+    input.placeholder = "lumen.local or 192.168.1.50…";
     input.name = "controller";
     input.autocomplete = "off";
     input.spellcheck = false;
@@ -431,7 +426,7 @@
     form.addEventListener("submit", (e) => { e.preventDefault(); if (input.value.trim()) connectTo(input.value); });
     panel.appendChild(form);
     panel.appendChild(el("p", "conn-note",
-      "This works only when the controller has an API token set in secrets.h. Otherwise open http://nather.local directly."));
+      "This works only when the controller has an API token set in secrets.h. Otherwise open http://lumen.local directly."));
   }
 
   function togglePanel() {
@@ -452,7 +447,7 @@
     if (badge) badge.setAttribute("aria-expanded", "false");
   }
 
-  window.NatherDevice = {
+  window.LumenDevice = {
     ready,
     get mode() { return mode; },
     get link() { return link; },
